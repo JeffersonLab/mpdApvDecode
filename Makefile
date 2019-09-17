@@ -3,7 +3,7 @@
 #   Decode MPD and APV data from CODA 3.10 evio datafile
 #
 
-ARCH	= `uname -m`
+ARCH=$(shell uname -m)
 
 CODA	= /daqfs/coda/3.10
 EVIO_INC = ${CODA}/Linux-$(ARCH)/include
@@ -15,15 +15,20 @@ CFLAGS	= -I. -I${EVIO_INC} \
 		-levio -levioxx -lrt -lexpat
 CFLAGS	+= -g -Wall
 
-PROGS	= mpdApvDecode
+PROG	= mpdApvDecode
+SRC     = $(wildcard *.cc)
+OBJ     = ${SRC:.cc=.o}
 
-all: echoarch $(PROGS)
+all: echoarch $(PROG)
 
-%: %.cc
-	$(CC) $(CFLAGS) -o $@ $<
+$(PROG): $(OBJ)
+	$(CC) $(CFLAGS) -o $@ $(OBJ)
+
+%.o: %.cc
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 clean:
-	rm -f $(PROGS) *~
+	rm -f $(PROG) *~
 
 echoarch:
-	echo "Make for $(ARCH)"
+	@echo "Make for $(ARCH)"
