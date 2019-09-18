@@ -1,11 +1,45 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <string.h>
 #include "mpddata.hh"
 
 int
-mpddata::Clear_Stats()
+mpddata::ClearStats()
 {
+  memset(&mpd, 0, sizeof(mpd));
+
   return 1;
+}
+
+int
+mpddata::ShowData(int enable)
+{
+  if(enable)
+    {
+      show_block_header=1;
+      show_block_trailer=1;
+      show_event_header=1;
+      show_trigger_time=1;
+      show_apv_header=1;
+      show_apv_data=1;
+      show_apv_trailer=1;
+      show_event_trailer=1;
+      show_filler_word=1;
+    }
+  else
+    {
+      show_block_header=0;
+      show_block_trailer=0;
+      show_event_header=0;
+      show_trigger_time=0;
+      show_apv_header=0;
+      show_apv_data=0;
+      show_apv_trailer=0;
+      show_event_trailer=0;
+      show_filler_word=0;
+    }
+
+  return 0;
 }
 
 int
@@ -31,11 +65,14 @@ mpddata::DecodeWord(uint32_t data)
       {
 	mpd_block_header_t d; d.raw = data;
 
-	printf("%08X - BLOCK HEADER - modID = %d   event_per_block = %d   block_count = %d\n",
-	       d.raw,
-	       d.bf.module_id,
-	       d.bf.event_per_block,
-	       d.bf.block_count);
+	if(show_block_header)
+	  {
+	    printf("%08X - BLOCK HEADER - modID = %d   event_per_block = %d   block_count = %d\n",
+		   d.raw,
+		   d.bf.module_id,
+		   d.bf.event_per_block,
+		   d.bf.block_count);
+	  }
 
 	modID_current = d.bf.module_id;
 
@@ -50,13 +87,54 @@ mpddata::DecodeWord(uint32_t data)
       {
 	mpd_block_trailer_t d; d.raw = data;
 
-	printf("%08X - BLOCK TRAILER - n_words_in_block = %d\n",
-	       d.raw,
-	       d.bf.n_words_in_block);
+	if(show_block_trailer)
+	  {
+	    printf("%08X - BLOCK TRAILER - n_words_in_block = %d\n",
+		   d.raw,
+		   d.bf.n_words_in_block);
+	  }
 
-	// FIXME: Compare these values before overwritting
-	// Check apvmask, napv vs previous
+	// Checks
+	if(mpd[modID_current].have_stats & check_n_words_in_block)
+	  {
+	    if(mpd[modID_current].n_words_in_block != d.bf.n_words_in_block)
+	      {
+		DEC_ERR("%2d: Current n_words_in_block != previous (%d != %d)\n",
+			modID_current,
+			d.bf.n_words_in_block,
+			mpd[modID_current].n_words_in_block);
+	      }
+	  }
 
+	if(mpd[modID_current].have_stats & check_apvmask)
+	  {
+	    if(apvmask != mpd[modID_current].apvmask)
+	      {
+		DEC_ERR("%2d: Current apvmask != previous (0x%04x != 0x%04x)\n",
+			modID_current,
+			apvmask,
+			mpd[modID_current].apvmask);
+	      }
+	  }
+
+	if(mpd[modID_current].have_stats & check_napv)
+	  {
+	    if(napv != mpd[modID_current].napv)
+	      {
+		DEC_ERR("%2d: Current napv != previous (%2d != %2d)\n",
+			modID_current,
+			napv,
+			mpd[modID_current].napv);
+	      }
+	  }
+
+	mpd[modID_current].have_stats = 1;
+	mpd[modID_current].n_words_in_block = d.bf.n_words_in_block;
+	mpd[modID_current].apvmask = apvmask;
+	mpd[modID_current].napv = napv;
+
+	apvmask = 0;
+	napv = 0;
 	modID_current = -1; // reset for next module
 	apvID_current = -1;
 
@@ -67,28 +145,48 @@ mpddata::DecodeWord(uint32_t data)
       {
 	mpd_event_header_t d; d.raw = data;
 
-	printf("%08X - EVENT HEADER - event_count = %d\n",
-	       d.raw,
-	       d.bf.event_count);
+	if(show_event_header)
+	  {
+	    printf("%08X - EVENT HEADER - event_count = %d\n",
+		   d.raw,
+		   d.bf.event_count);
+	  }
 
-	// FIXME: Compare these values before overwritting (should inc by 1)
+	// Checks
+	if(mpd[modID_current].have_stats & check_event_count)
+	  {
+	    if(d.bf.event_count <= mpd[modID_current].event_count)
+	      {
+		DEC_ERR("%2d: Current event_count <= previous (%d <= %d)\n",
+			modID_current,
+			d.bf.event_count,
+			mpd[modID_current].event_count);
+	      }
+	  }
+
 	mpd[modID_current].event_count = d.bf.event_count;
+
 	break;
       }
 
     case 3:		/* TRIGGER TIME */
       {
 	mpd_trigger_time_t d; d.raw = data;
-	printf("%08X - TRIGGER TIME %d - coarse_trigger_time = %08x\n",
-	       d.raw,
-	       (d.bf.cont) ? 2 : 1,
-	       d.bf.coarse_trigger_time );
 
-	// FIXME: Check that the shift is correct for the continution
-	if(d.bf.cont)
-	  mpd[modID_current].trigger_time |= (d.bf.coarse_trigger_time << 20);
-	else
+	if(show_trigger_time)
+	  {
+	    printf("%08X - TRIGGER TIME %d - coarse_trigger_time = %08x\n",
+		   d.raw,
+		   (d.bf.cont) ? 2 : 1,
+		   d.bf.coarse_trigger_time );
+	  }
+
+	/* Each trigger time word is 20 bits.  First is first 20 bits. Second is last 20 bits */
+	if(d.bf.cont == 0)
 	  mpd[modID_current].trigger_time = d.bf.coarse_trigger_time;
+	else
+	  mpd[modID_current].trigger_time |= (d.bf.coarse_trigger_time << 20);
+
 	break;
       }
 
@@ -100,20 +198,24 @@ mpddata::DecodeWord(uint32_t data)
 	mpd_apv_trailer_t at;
 	mpd_data_trailer_t dt;
 
-	printf("%08X - APV ",//- proc_data_type = %d  processed_data = %x\n",
-	       d.raw);/* , */
-	/* d.bf.proc_data_type, */
-	/* d.bf.processed_data); */
+	if(show_apv_header || show_apv_data || show_apv_trailer)
+	  {
+	    printf("%08X - APV ",//- proc_data_type = %d  processed_data = %x\n",
+		   d.raw);/* , */
+	  }
 
 	switch ( d.bf.proc_data_type )
 	  {
 	  case 0: /* HEADER */
 	    dh.raw = data;
 
-	    printf("HEADER: what %x  apv_header %x  apv_id %x\n",
-		   dh.bf.what,
-		   dh.bf.apv_header,
-		   dh.bf.apv_id);
+	    if(show_apv_header)
+	      {
+		printf("HEADER: what %x  apv_header %x  apv_id %x\n",
+		       dh.bf.what,
+		       dh.bf.apv_header,
+		       dh.bf.apv_id);
+	      }
 	    data_count = 0;
 	    apvID_current = dh.bf.apv_id;
 
@@ -129,20 +231,65 @@ mpddata::DecodeWord(uint32_t data)
 	  case 1: /* Reduced Data */
 	    rd.raw = data;
 
-	    printf("DATA (%3d): channel_number = %3d  data = 0x%03x (%4d)\n",
-		   data_count++,
-		   rd.bf.channel_number,
-		   rd.bf.data, rd.bf.data);
+	    if(show_apv_data)
+	      {
+		printf("DATA (%3d): channel_number = %3d  data = 0x%03x (%4d)\n",
+		       data_count++,
+		       rd.bf.channel_number,
+		       rd.bf.data, rd.bf.data);
+	      }
 	    break;
 
 	  case 2: /* APV Trailer */
 	    at.raw = data;
-	    printf("TRAILER 1: mod_id = %d  sample_count = %d  frame_counter = %d\n",
-		   at.bf.mod_id,
-		   at.bf.sample_count,
-		   at.bf.frame_counter);
 
-	    // FIXME: Compare these values before overwritting
+	    if(show_apv_trailer)
+	      {
+		printf("TRAILER 1: mod_id = %d  sample_count = %d  frame_counter = %d\n",
+		       at.bf.mod_id,
+		       at.bf.sample_count,
+		       at.bf.frame_counter);
+	      }
+
+	    // Checks
+	    if(mpd[modID_current].have_stats & check_ndata)
+	      {
+		if(data_count != mpd[modID_current].apv[apvID_current].ndata)
+		  {
+		    DEC_ERR("%2d: APV%2d: ndata != previous (%d != %d)\n",
+			    modID_current, apvID_current,
+			    data_count,
+			    mpd[modID_current].apv[apvID_current].ndata);
+		  }
+
+	      }
+
+	    if(mpd[modID_current].have_stats & check_sample_count)
+	      {
+		if((at.bf.sample_count != 0) &&
+		   (at.bf.sample_count <= mpd[modID_current].apv[apvID_current].sample_count))
+		  {
+		    DEC_ERR("%2d: APV%2d: sample_count <= previous (%d <= %d)\n",
+			    modID_current, apvID_current,
+			    at.bf.sample_count,
+			    mpd[modID_current].apv[apvID_current].sample_count);
+
+		  }
+
+	      }
+
+	    if(mpd[modID_current].have_stats & check_frame_count)
+	      {
+		if((at.bf.frame_counter != 0) &&
+		   (at.bf.frame_counter <= mpd[modID_current].apv[apvID_current].frame_count))
+		  {
+		    DEC_ERR("%2d: APV%2d: frame_count <= previous (%d <= %d)\n",
+			    modID_current, apvID_current,
+			    at.bf.frame_counter,
+			    mpd[modID_current].apv[apvID_current].frame_count);
+		  }
+	      }
+
 	    mpd[modID_current].apv[apvID_current].ndata = data_count;
 	    mpd[modID_current].apv[apvID_current].sample_count = at.bf.sample_count;
 	    mpd[modID_current].apv[apvID_current].frame_count = at.bf.frame_counter;
@@ -152,14 +299,40 @@ mpddata::DecodeWord(uint32_t data)
 	  case 3: /* Trailer */
 	  default:
 	    dt.raw = data;
-	    printf("TRAILER 2: baseline_value = %d  word_count = %d\n",
-		   dt.bf.baseline_value,
-		   dt.bf.word_count);
+	    if(show_apv_trailer)
+	      {
+		printf("TRAILER 2: baseline_value = %d  word_count = %d\n",
+		       dt.bf.baseline_value,
+		       dt.bf.word_count);
+	      }
 
 	    // FIXME: Compare these values before overwritting
 	    // Check that word_count - data_count = 4.
+	    // Checks
+	    if(mpd[modID_current].have_stats & check_baseline_value)
+	      {
+		if( (dt.bf.baseline_value < minimum_baseline) ||
+		    (dt.bf.baseline_value > maximum_baseline) )
+		  {
+		    DEC_ERR("%2d: APV%2d: baseline out of range (%d)\n",
+			    modID_current, apvID_current,
+			    dt.bf.baseline_value);
+		  }
+	      }
+
+	    if(mpd[modID_current].have_stats & check_word_count)
+	      {
+		if(dt.bf.word_count != mpd[modID_current].apv[apvID_current].word_count)
+		  {
+		    DEC_ERR("%2d: APV%2d: word_count != previous (%d != %d)\n",
+			    modID_current, apvID_current,
+			    dt.bf.word_count,
+			    mpd[modID_current].apv[apvID_current].word_count);
+		  }
+	      }
+
 	    mpd[modID_current].apv[apvID_current].baseline_value = dt.bf.baseline_value;
-	    mpd[modID_current].apv[apvID_current].frame_count = dt.bf.word_count;
+	    mpd[modID_current].apv[apvID_current].word_count = dt.bf.word_count;
 
 	    break;
 	  }
@@ -170,10 +343,27 @@ mpddata::DecodeWord(uint32_t data)
       {
 	mpd_event_trailer_t d; d.raw = data;
 
-	printf("%08X - EVENT TRAILER - n_words_in_event = %d  fine_trigger_time = %d\n",
-	       d.raw,
-	       d.bf.n_words_in_event,
-	       d.bf.fine_trigger_time);
+	if(show_event_trailer)
+	  {
+	    printf("%08X - EVENT TRAILER - n_words_in_event = %d  fine_trigger_time = %d\n",
+		   d.raw,
+		   d.bf.n_words_in_event,
+		   d.bf.fine_trigger_time);
+	  }
+
+	// Checks;
+	if(mpd[modID_current].have_stats & check_n_words_in_event)
+	  {
+	    if(d.bf.n_words_in_event != mpd[modID_current].n_words_in_event)
+	      {
+		DEC_ERR("%2d: Current n_words_in_event != previous (%d != %d)\n",
+			modID_current,
+			d.bf.n_words_in_event,
+			mpd[modID_current].n_words_in_event);
+	      }
+	  }
+
+	mpd[modID_current].n_words_in_event = d.bf.n_words_in_event;
 	break;
       }
 
@@ -181,8 +371,11 @@ mpddata::DecodeWord(uint32_t data)
       {
 	mpd_filler_t d; d.raw = data;
 
-	printf("%08X - FILLER WORD\n",
-	       d.raw);
+	if(show_filler_word)
+	  {
+	    printf("%08X - FILLER WORD\n",
+		   d.raw);
+	  }
 	break;
       }
 

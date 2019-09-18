@@ -2,6 +2,9 @@
 #define __MPDDEC__
 #include <stdint.h>
 
+#define DEC_ERR(format, ...) {						\
+    fprintf(stdout,"%s: ERROR: ",__func__); fprintf(stdout,format, ## __VA_ARGS__);}
+
 typedef struct
 {
   uint32_t data:21;
@@ -197,27 +200,82 @@ public:
   typedef struct
   {
     uint32_t ndata; // number of data words in current frame
-    uint8_t frame_count; // current frame  APV Trailer
     uint8_t sample_count; // current frame  APV Trailer
+    uint8_t frame_count; // current frame  APV Trailer
     uint16_t baseline_value; // current frame APV Trailer
+    uint8_t word_count; // current frame  APV Trailer
   } apvstats;
 
   typedef struct
   {
-    uint64_t event_count;  // event header
+    uint32_t n_words_in_block; // block trailer
+    uint16_t apvmask;
+    uint8_t  napv;
+    uint32_t event_count;  // event header
     uint64_t trigger_time; // trigger time
     apvstats apv[16]; // apv_id is index
-    uint16_t apvmask;
-    uint8_t  napv;     // unique in mask
-    uint32_t event_nwords; // event trailer
-    uint32_t block_nwords; // block trailer
+    uint16_t n_words_in_event;
+    int have_stats;
   } mpdstats;
 
   mpdstats mpd[21];
   uint32_t mpdmask;
   uint16_t nmpd;
 
-  int Clear_Stats();
+  // These will be added to their own class using libconfig
+  int check_apvmask;
+  int check_napv;
+  int check_event_count;
+  int check_ndata;
+  int check_sample_count;
+  int check_frame_count;
+  int check_baseline_value;
+  int check_word_count;
+  int check_n_words_in_event;
+  int check_n_words_in_block;
+
+  int show_block_header;
+  int show_block_trailer;
+  int show_event_header;
+  int show_trigger_time;
+  int show_apv_header;
+  int show_apv_data;
+  int show_apv_trailer;
+  int show_event_trailer;
+  int show_filler_word;
+
+  int minimum_baseline;
+  int maximum_baseline;
+
+  mpddata()
+  {
+    check_apvmask=1;
+    check_napv=1;
+    check_event_count=1;
+    check_ndata=1;
+    check_sample_count=1;
+    check_frame_count=1;
+    check_baseline_value=1;
+    check_word_count=1;
+    check_n_words_in_event=1;
+    check_n_words_in_block=1;
+
+    show_block_header=1;
+    show_block_trailer=1;
+    show_event_header=1;
+    show_trigger_time=1;
+    show_apv_header=1;
+    show_apv_data=1;
+    show_apv_trailer=1;
+    show_event_trailer=1;
+    show_filler_word=1;
+
+    minimum_baseline = 100;
+    maximum_baseline = 1900;
+  };
+
+  int ShowData(int enable);
+  int ClearStats();
   int DecodeWord(uint32_t data);
   int DecodeBuffer(const uint32_t *buffer, int len);
 };

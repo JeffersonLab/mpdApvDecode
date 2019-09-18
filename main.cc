@@ -67,6 +67,7 @@ main(int argc, char **argv)
   uint64_t max_eventnumber = -1, skip_eventnumber = 0;
   string evio_filename,
     config_filename = "mpdApvDecode.cfg", out_filename = "out.dec";
+  int showData = 1;
 
   if (input.cmdOptionExists("-f"))
     {
@@ -93,6 +94,11 @@ main(int argc, char **argv)
       max_eventnumber = strtoll(input.getCmdOption("-m").c_str(), NULL, 10);
     }
 
+  if (input.cmdOptionExists("-e"))
+    {
+      showData = 0;
+    }
+
   if (evio_filename.empty())
     {
       cerr << "ERROR: filename required" << endl;
@@ -115,7 +121,14 @@ main(int argc, char **argv)
     uint32_t *buffer, blen;
     evioDictEntry tn;
 
-    mpddata mdat[16];
+    mpddata *mdat[16];
+    for(int iroc = 0; iroc < 16; iroc++)
+      {
+	mdat[iroc] = new mpddata();
+    	mdat[iroc]->ShowData(showData);
+    	mdat[iroc]->ClearStats();
+      }
+
 
     while (chan->readAlloc((uint32_t **) & buffer, &blen))
       {
@@ -178,7 +191,7 @@ main(int argc, char **argv)
 		iter++;
 	      }
 
-	    if (d16 != NULL)
+	    if ((d16 != NULL) && (len != 0))
 	      {
 		evType = d16[0];
 	      }
@@ -200,7 +213,7 @@ main(int argc, char **argv)
 
 	    if (d32 != NULL)
 	      {
-		mdat[rocnum].DecodeBuffer(d32, len);
+		mdat[rocnum]->DecodeBuffer(d32, len);
 	      }
 
 	  }
@@ -208,6 +221,8 @@ main(int argc, char **argv)
       }
 
 
+    for(int iroc = 0; iroc < 16; iroc++)
+      delete mdat[iroc];
   }
   catch(evioException e)
   {
