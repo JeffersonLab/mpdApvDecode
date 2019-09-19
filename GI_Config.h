@@ -36,39 +36,33 @@
 using namespace std;
 using namespace libconfig;
 
-class GI_Config
-{
+class GI_Config {
 
-private:
+ private:
   Config cfg;
   std::string fName;
 
   // cli argument array
-  std::string * fargp, *fargv;
+  std::string *fargp, *fargv;
   int fargc;
 
 
 
   //:::::::::::::::::::::::::::::::::::::::::::::
 
-  void manageXError(int nlev, int *idx, std::string * rdx, int ret)
-  {
+  void manageXError(int nlev, int *idx, std::string *rdx, int ret) {
     cout << __FUNCTION__ << ": ";
-    for (int i = 0; i < nlev; i++)
-      {
-	cout << rdx[i].data() << "[" << idx[i] << "].";
-      }
-    cout << " does not exist ... exit(0x" << (hex) << ret << " " << (dec) <<
-      ret << ")" << endl;
+    for (int i=0;i<nlev;i++) {
+      cout << rdx[i].data() << "[" << idx[i] << "].";
+    }
+    cout << " does not exist ... exit(0x" << (hex) << ret << " " << (dec) << ret << ")"<< endl;
     exit(ret);
   }
 
   /*................
    * Search setting, if nothing found (in specific and in default) return NULL
    */
-  Setting *searchX(int &berr, int nlev, int *idx, std::string * rdx,
-		   int &length)
-  {
+  Setting * searchX(int &berr, int nlev, int *idx, std::string *rdx, int &length) {
 
     int ret;
 
@@ -80,79 +74,61 @@ private:
     bs[0] = ss;
     bs[1] = &((*ss)["default"]);
 #ifdef GICONF_DEBUG
-    cout << __FUNCTION__ << " " << rdx[nlev - 1] << " " << nlev << endl;
+    cout << __FUNCTION__ << " " << rdx[nlev-1] << " " << nlev << endl;
 #endif
     ps = NULL;
 
-    for (int k = 0; k < 2; k++)
-      {				// loop on specific / default setting
+    for (int k=0; k<2; k++) { // loop on specific / default setting
 
-	ret = 0;
-	ps = bs[k];
+      ret = 0;
+      ps = bs[k];
 
-	for (int i = 0; i < nlev; i++)
-	  {
+      for (int i=0; i<nlev; i++) {
 #ifdef GICONF_DEBUG
-	    cout << __FUNCTION__ << " " << k << "/" << i << " " << rdx[i] <<
-	      " check " << ret << endl;
+	cout << __FUNCTION__ << " " << k << "/" << i << " " << rdx[i] << " check " << ret << endl;
 #endif
-	    if (!(ps->exists(rdx[i].data())))
-	      {			// check if param exist
+	if (!(ps->exists(rdx[i].data()))) { // check if param exist
+	  ret = 1;
+	  berr |= (2*k+1)<<(i*2);
+	  break;
+	}
+
+	if (ret == 0) {
+	  if ((*ps)[rdx[i].data()].isArray() || (*ps)[rdx[i].data()].isList()) { // list should be enough
+	    ll = (*ps)[rdx[i].data()].getLength();
+	    if (idx[i]>=ll) { // check boundary
+	      if ((ll<=1) && (k==1)) { // assume default scalar or one element list
+		ps = &((*ps)[rdx[i].data()][0]);
+	      } else {
 		ret = 1;
-		berr |= (2 * k + 1) << (i * 2);
+		berr |= (((2*k+1)<<(i*2)) | 0x20000000);
 		break;
 	      }
-
-	    if (ret == 0)
-	      {
-		if ((*ps)[rdx[i].data()].isArray()
-		    || (*ps)[rdx[i].data()].isList())
-		  {		// list should be enough
-		    ll = (*ps)[rdx[i].data()].getLength();
-		    if (idx[i] >= ll)
-		      {		// check boundary
-			if ((ll <= 1) && (k == 1))
-			  {	// assume default scalar or one element list
-			    ps = &((*ps)[rdx[i].data()][0]);
-			  }
-			else
-			  {
-			    ret = 1;
-			    berr |= (((2 * k + 1) << (i * 2)) | 0x20000000);
-			    break;
-			  }
-		      }
-		    else
-		      {
-			ps = &((*ps)[rdx[i].data()][idx[i]]);
-		      }
-		  }
-		else
-		  {		// is scalar or group
-		    ps = &((*ps)[rdx[i].data()]);
-		  }
-	      }
+	    } else {
+	      ps = &((*ps)[rdx[i].data()][idx[i]]);
+	    }
+	  } else { // is scalar or group
+	    ps = &((*ps)[rdx[i].data()]);
+	  }
+	}
 
 #ifdef GICONF_DEBUG
-	    cout << __FUNCTION__ << " " << k << "/" << i <<
-	      " loop passed (def/spe) " << (*ps).
-	      getPath() << " berr= 0x" << (hex) << berr << (dec) << endl;
+	cout << __FUNCTION__ << " " << k << "/" << i << " loop passed (def/spe) "
+	     << (*ps).getPath() << " berr= 0x" << (hex) << berr << (dec) << endl;
 #endif
-	  }			// loop on i
+      } // loop on i
 
-	if ((k == 0) && (ret == 0))
-	  {
-	    break;
-	  }			// specific setting exist, no need to loop on default
+      if ((k==0) && (ret==0)) {
+	break;
+      } // specific setting exist, no need to loop on default
 
-	if ((k == 1) && (ret == 1))
-	  {
-	    berr |= 0x80000000;
-	    ps = NULL;
-	    break;
-	  }
+      if ((k==1) && (ret==1)) {
+	berr |= 0x80000000;
+	ps = NULL;
+	break;
+      }
 
-      }				// loop of k
+    } // loop of k
 
     length = ll;
     return ps;
@@ -201,75 +177,67 @@ private:
 
   */
 
-  int getX(void *value, int nlev, int *idx, std::string * rdx)
-  {
+  int getX(void *value, int nlev, int *idx, std::string *rdx) {
 
     int *ival;
     float *fval;
-    std::string * sval;
+    std::string *sval;
     bool *bval;
 
-    int berr = 0;		// errors
+    int berr=0; // errors
 
-    Setting *bs[2], *ps;
+    Setting *bs[2],*ps;
 
     Setting *ss = &(cfg.getRoot());
     bs[0] = ss;
     bs[1] = &((*ss)["default"]);
 
 #ifdef GICONF_DEBUG
-    cout << __FUNCTION__ << " " << rdx[nlev - 1] << " " << nlev << endl;
+    cout << __FUNCTION__ << " " << rdx[nlev-1] << " " << nlev << endl;
 #endif
 
     int size;
-    try
-    {
+    try {
 
       ps = searchX(berr, nlev, idx, rdx, size);
 
-      if (ps == NULL)
-	{
+      if (ps == NULL) {
+	throw berr;
+      } else {
+
+	Setting::Type tt = ps->getType();
+
+	tt = ps->getType();
+	switch (tt) {
+	case Setting::TypeInt:
+	case Setting::TypeInt64:
+	  ival = (int *) value;
+	  *ival = 0;
+	  cfg.lookupValue(ps->getPath(), *ival);
+	  break;
+	case Setting::TypeFloat:
+	  fval = (float *) value;
+	  *fval = 0.;
+	  cfg.lookupValue(ps->getPath(), *fval);
+	  break;
+	case Setting::TypeString:
+	  sval = (std::string *) value;
+	  *sval = "";
+	  cfg.lookupValue(ps->getPath(), *sval);
+	  break;
+	case Setting::TypeBoolean:
+	  bval =(bool *) value;
+	  *bval = 0;
+	  cfg.lookupValue(ps->getPath(), *bval);
+	  break;
+	default:
+	  berr |= 0xC0000000;
 	  throw berr;
+	  break;
 	}
-      else
-	{
+      }
 
-	  Setting::Type tt = ps->getType();
-
-	  tt = ps->getType();
-	  switch (tt)
-	    {
-	    case Setting::TypeInt:
-	    case Setting::TypeInt64:
-	      ival = (int *) value;
-	      *ival = 0;
-	      cfg.lookupValue(ps->getPath(), *ival);
-	      break;
-	    case Setting::TypeFloat:
-	      fval = (float *) value;
-	      *fval = 0.;
-	      cfg.lookupValue(ps->getPath(), *fval);
-	      break;
-	    case Setting::TypeString:
-	      sval = (std::string *) value;
-	      *sval = "";
-	      cfg.lookupValue(ps->getPath(), *sval);
-	      break;
-	    case Setting::TypeBoolean:
-	      bval = (bool *) value;
-	      *bval = 0;
-	      cfg.lookupValue(ps->getPath(), *bval);
-	      break;
-	    default:
-	      berr |= 0xC0000000;
-	      throw berr;
-	      break;
-	    }
-	}
-
-    }
-    catch(int er)
-    {
+    } catch (int er) {
       manageXError(nlev, idx, rdx, er);
     }
 
@@ -279,121 +247,106 @@ private:
 
   //
 
-  int getX(void *value, int nlev, int *idx, const char **rdx)
-  {
+  int getX(void *value, int nlev, int *idx, const char** rdx) {
 
-    std::string * ss;
+    std::string *ss;
     ss = new std::string[nlev];
 
-    for (int i = 0; i < nlev; i++)
-      {
-	ss[i] = rdx[i];
-      }
+    for (int i=0;i<nlev;i++) {
+      ss[i] = rdx[i];
+    }
     return getX(value, nlev, idx, ss);
   }
 
   //
   //
 
-  Setting::Type getType(int &berr, int nlev, int *idx, std::string * rdx)
-  {
+   Setting::Type getType(int &berr, int nlev, int *idx, std::string *rdx) {
 
-    Setting::Type sety;
+     Setting::Type sety;
 
-    Setting *ps;
-
-#ifdef GICONF_DEBUG
-    cout << __FUNCTION__ << " " << rdx[nlev - 1] << " " << nlev << endl;
-#endif
-
-    int size;
-    ps = searchX(berr, nlev, idx, rdx, size);
-
-    if (ps != NULL)
-      {
-	// cout << __FUNCTION__ << " " << ps->getPath() << " " << ps->getType() << " " << berr << endl;
-	sety = ps->getType();
-      }
-    else
-      {				// setting does not exist, cannot update
-	sety = Setting::TypeNone;
-#ifdef GICONF_DEBUG
-	cout << __FUNCTION__ << " setting does not exist" << endl;
-#endif
-      }
-
-    return sety;
-
-  }
-
-  /*
-   * Return number of elements of a given setting (-1 if not found)
-   *
-   */
-  int getLength(int nlev, int *idx, std::string * rdx)
-  {
-
-    int size;
-    int berr;
-
-    Setting *ps;
+     Setting *ps;
 
 #ifdef GICONF_DEBUG
-    cout << __FUNCTION__ << " " << rdx[nlev - 1] << " " << nlev << endl;
+     cout << __FUNCTION__ << " " << rdx[nlev-1] << " " << nlev << endl;
 #endif
 
-    ps = searchX(berr, nlev, idx, rdx, size);
+     int size;
+     ps = searchX(berr, nlev, idx, rdx, size);
 
-    if (ps == NULL)
-      {
-	// cout << __FUNCTION__ << " " << ps->getPath() << " " << ps->getType() << " " << berr << endl;
-	size = -1;
+     if (ps != NULL ) {
+       // cout << __FUNCTION__ << " " << ps->getPath() << " " << ps->getType() << " " << berr << endl;
+       sety = ps->getType();
+     } else { // setting does not exist, cannot update
+       sety = Setting::TypeNone;
 #ifdef GICONF_DEBUG
-	cout << __FUNCTION__ << " setting does not exist" << endl;
+       cout << __FUNCTION__ << " setting does not exist" << endl;
 #endif
-      }
+     }
 
-    return size;
+     return sety;
 
-  }
+   }
 
-  int getLength(int nlev, int *idx, const char **rdx)
-  {
+   /*
+    * Return number of elements of a given setting (-1 if not found)
+    *
+    */
+   int getLength(int nlev, int *idx, std::string *rdx) {
 
-    std::string * ss;
+     int size;
+     int berr;
+
+     Setting *ps;
+
+#ifdef GICONF_DEBUG
+     cout << __FUNCTION__ << " " << rdx[nlev-1] << " " << nlev << endl;
+#endif
+
+     ps = searchX(berr, nlev, idx, rdx, size);
+
+     if (ps == NULL ) {
+       // cout << __FUNCTION__ << " " << ps->getPath() << " " << ps->getType() << " " << berr << endl;
+       size = -1;
+#ifdef GICONF_DEBUG
+       cout << __FUNCTION__ << " setting does not exist" << endl;
+#endif
+     }
+
+     return size;
+
+   }
+
+   int getLength(int nlev, int *idx, const char** rdx) {
+
+    std::string *ss;
     ss = new std::string[nlev];
 
-    for (int i = 0; i < nlev; i++)
-      {
-	ss[i] = rdx[i];
-      }
+    for (int i=0;i<nlev;i++) {
+      ss[i] = rdx[i];
+    }
     return getLength(nlev, idx, ss);
   }
 
 
-  // from string to T ( see http://forums.codeguru.com/showthread.php?t=231054)
-  template < class T > bool from_string(T & t, const std::string & s,
-					std::ios_base & (*f) (std::
-							      ios_base &))
-  {
-    std::istringstream iss(s);
-    return !(iss >> f >> t).fail();
-  }
+   // from string to T ( see http://forums.codeguru.com/showthread.php?t=231054)
+   template <class T> bool from_string(T& t, const std::string& s, std::ios_base& (*f)(std::ios_base&)) {
+     std::istringstream iss(s);
+     return !(iss >> f >> t).fail();
+   }
 
 
   //##############################################################à
 
-public:
+ public:
 
-  GI_Config()
-  {
+  GI_Config() {
 
     fName = "";
-    fargc = 0;
+    fargc=0;
   };
 
-  ~GI_Config()
-  {
+  ~GI_Config() {
   };
 
   /* Read and parse input config file
@@ -401,29 +354,22 @@ public:
    * return -1 on error (TBD)
    */
 
-  int parseFile(std::string filename)
-  {
+  int parseFile(std::string filename) {
 
-    if (fName != "")
-      {
-	cout << __FUNCTION__ << ": WARNING file " << filename <<
-	  " will be parsed, overlapping previous " << fName << " config file"
-	  << endl;
-      }
+    if (fName != "") {
+      cout << __FUNCTION__ << ": WARNING file " << filename << " will be parsed, overlapping previous " << fName << " config file" << endl;
+    }
 
-    try
-    {
+    try {
       cfg.readFile(filename.data());
     }
-    catch(const FileIOException & fioex)
-    {
+    catch(const FileIOException &fioex) {
       std::cerr << "I/O error while reading file." << std::endl;
       exit(EXIT_FAILURE);
     }
-    catch(const ParseException & pex)
-    {
+    catch(const ParseException &pex) {
       std::cerr << "Parse error at " << pex.getFile() << ":" << pex.getLine()
-	<< " - " << pex.getError() << std::endl;
+		<< " - " << pex.getError() << std::endl;
       exit(EXIT_FAILURE);
     }
     fName = filename;
@@ -441,12 +387,10 @@ public:
    */
   void save(const char *outfile)
   {
-    if (fName.size() > 0)
-      {
-	cfg.writeFile(outfile);
-      }
-    cout << __FUNCTION__ << ": configuration written on file " << outfile <<
-      endl;
+    if (fName.size()>0) {
+      cfg.writeFile(outfile);
+    }
+    cout << __FUNCTION__ << ": configuration written on file " << outfile << endl;
   }
 
 
@@ -455,8 +399,7 @@ public:
    * (mainly used for debug)
    */
 
-  int nav(const Setting & ss)
-  {
+  int nav(const Setting& ss) {
 
     //  cout << " Setting Name  : " << ss.getName() << endl;
 
@@ -472,36 +415,34 @@ public:
     std::string str;
     bool boo;
 
-    switch (tt)
-      {
-      case Setting::TypeInt:
-      case Setting::TypeInt64:
-	i32 = ss;
-	cout << " = " << i32;
-	break;
-      case Setting::TypeFloat:
-	dou = ss;
-	cout << " = " << dou;
-	break;
-      case Setting::TypeString:
-	str = ss.c_str();
-	cout << " = " << str;
-	break;
-      case Setting::TypeBoolean:
-	boo = ss;
-	cout << " = " << boo;
-	break;
-      default:
-	cout << " [" << ll << "]";
-	// loop could be here
-	break;
-      }
+    switch (tt) {
+    case Setting::TypeInt:
+    case Setting::TypeInt64:
+      i32 = ss;
+      cout << " = " << i32;
+      break;
+    case Setting::TypeFloat:
+      dou = ss;
+      cout << " = " << dou;
+      break;
+    case Setting::TypeString:
+      str =  ss.c_str();
+      cout << " = " << str;
+      break;
+    case Setting::TypeBoolean:
+      boo = ss;
+      cout << " = " << boo;
+      break;
+    default:
+      cout << " [" << ll << "]";
+      // loop could be here
+      break;
+    }
     cout << endl;
 
-    for (int i = 0; i < ll; i++)
-      {
-	nav(ss[i]);
-      }
+    for (int i=0;i<ll;i++) {
+      nav(ss[i]);
+    }
 
     return ll;
 
@@ -511,23 +452,19 @@ public:
    * ---> obsolete
    */
 
-  int getInt(const char *path, int &ret)
-  {
+  int getInt(const char *path, int &ret) {
 
     int value;
 
-    if (cfg.lookupValue(path, value))
-      {
-	ret = 0;
-	return value;
-      }
-    else
-      {
-	ret = -1;
-	cout << " ERROR " << endl;
+    if (cfg.lookupValue(path,value)) {
+      ret = 0;
+      return value;
+    } else {
+      ret = -1;
+      cout << " ERROR " << endl;
 
-	exit(-1);
-      }
+      exit(-1);
+    }
 
   }
 
@@ -540,12 +477,10 @@ public:
    *
    */
 
-  template < typename Tipo > Tipo getAPV(int &ret, int elx, const char *name,
-					 int apv, int mpd, int bus = 0)
-  {
+  template<typename Tipo> Tipo getAPV(int &ret, int elx, const char * name, int apv, int mpd, int bus=0) {
     Tipo val;
-    int lev[4] = { bus, mpd, apv, elx };
-    const char *slev[4] = { "bus", "mpd", "apv", name };
+    int lev[4]={bus,mpd,apv,elx};
+    const char *slev[4]={"bus","mpd","apv",name};
     ret = getX(&val, 4, lev, slev);
     return (Tipo) val;
   }
@@ -553,18 +488,15 @@ public:
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getAPV(int &ret, const char *name, int apv,
-					 int mpd, int bus = 0)
-  {
-    return (Tipo) getAPV < Tipo > (ret, 0, name, apv, mpd, bus);
+  template<typename Tipo> Tipo getAPV(int &ret, const char * name, int apv, int mpd, int bus=0) {
+    return (Tipo) getAPV<Tipo>(ret, 0, name, apv, mpd, bus);
   }
 
   /* Return number of APV elements in given mpd and bus
    */
-  int getAPVLength(int mpd, int bus = 0)
-  {
-    int lev[3] = { bus, mpd, 0 };
-    const char *slev[3] = { "bus", "mpd", "apv" };
+  int getAPVLength(int mpd, int bus=0) {
+    int lev[3]={bus,mpd,0};
+    const char *slev[3]={"bus","mpd","apv"};
     return getLength(3, lev, slev);
   }
 
@@ -572,12 +504,10 @@ public:
    * specialized get bus.mpd parameter
    */
 
-  template < typename Tipo > Tipo getMPD(int &ret, int elx, const char *name,
-					 int mpd, int bus = 0)
-  {
+  template<typename Tipo> Tipo getMPD(int &ret, int elx, const char *name, int mpd, int bus=0) {
     Tipo val;
-    int lev[3] = { bus, mpd, elx };
-    const char *slev[3] = { "bus", "mpd", name };
+    int lev[3]={bus, mpd, elx};
+    const char *slev[3]={"bus","mpd", name};
     ret = getX(&val, 3, lev, slev);
     return (Tipo) val;
   }
@@ -585,34 +515,15 @@ public:
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getMPD(int &ret, const char *name, int mpd,
-					 int bus = 0)
-  {
-    return (Tipo) getMPD < Tipo > (ret, 0, name, mpd, bus);
+  template<typename Tipo> Tipo getMPD(int &ret, const char * name, int mpd, int bus=0) {
+    return (Tipo) getMPD<Tipo>(ret, 0, name, mpd, bus);
   }
 
   /* Return the number of MPD elements in given bus
    */
-  int getMPDLength(int bus = 0)
-  {
-    int lev[2] = { bus, 0 };
-    const char *slev[2] = { "bus", "mpd" };
-indent: Standard input:636: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:637: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:638: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:639: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:640: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:641: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:642: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
+  int getMPDLength(int bus=0) {
+    int lev[2]={bus,0};
+    const char *slev[2]={"bus","mpd"};
     return getLength(2, lev, slev);
   }
 
@@ -620,12 +531,10 @@ indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Ass
    * specialized get bus.mpd.adc parameter
    */
 
-  template < typename Tipo > Tipo getADC(int &ret, int elx, const char *name,
-					 int adc, int mpd, int bus)
-  {
+  template<typename Tipo> Tipo getADC(int &ret, int elx, const char *name, int adc, int mpd, int bus) {
     Tipo val;
-    int lev[4] = { bus, mpd, adc, elx };
-    const char *slev[4] = { "bus", "mpd", "adc", name };
+    int lev[4]={bus,mpd,adc,elx};
+    const char *slev[4]={"bus","mpd","adc",name};
     ret = getX(&val, 4, lev, slev);
     return (Tipo) val;
   }
@@ -633,22 +542,18 @@ indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Ass
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getADC(int &ret, const char *name, int adc,
-					 int mpd, int bus = 0)
-  {
-    return (Tipo) getADC < Tipo > (ret, 0, name, adc, mpd, bus);
+  template<typename Tipo> Tipo getADC(int &ret, const char * name, int adc, int mpd, int bus=0) {
+    return (Tipo) getADC<Tipo>(ret, 0, name, adc, mpd, bus);
   }
 
   /**
    * specialized get bus.mpd.i2c parameter
    */
 
-  template < typename Tipo > Tipo getI2C(int &ret, int elx, const char *name,
-					 int mpd, int bus)
-  {
+  template<typename Tipo> Tipo getI2C(int &ret, int elx, const char *name, int mpd, int bus) {
     Tipo val;
-    int lev[4] = { bus, mpd, 0, elx };
-    const char *slev[4] = { "bus", "mpd", "i2c", name };
+    int lev[4]={bus,mpd,0,elx};
+    const char *slev[4]={"bus","mpd","i2c",name};
     ret = getX(&val, 4, lev, slev);
     return (Tipo) val;
   }
@@ -656,75 +561,65 @@ indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Ass
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getI2C(int &ret, const char *name, int mpd,
-					 int bus = 0)
-  {
-    return (Tipo) getI2C < Tipo > (ret, 0, name, mpd, bus);
+  template<typename Tipo> Tipo getI2C(int &ret, const char * name, int mpd, int bus=0) {
+    return (Tipo) getI2C<Tipo>(ret, 0, name, mpd, bus);
   }
 
   /**
    * specialized get bus parameter
    */
 
-  template < typename Tipo > Tipo getBUS(int &ret, int elx, const char *name,
-					 int bus = 0)
-  {
+  template<typename Tipo> Tipo getBUS(int &ret, int elx, const char*name, int bus=0) {
     Tipo val;
-    int lev[2] = { bus, elx };
-    const char *slev[2] = { "bus", name };
-    ret = getX(&val, 2, lev, slev);
+    int lev[2]={bus,elx};
+    const char *slev[2]={"bus",name};
+    ret = getX(&val, 2,lev,slev);
     return (Tipo) val;
   }
 
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getBUS(int &ret, const char *name, int bus =
-					 0)
-  {
-    return (Tipo) getBUS < Tipo > (ret, 0, name, bus);
+  template<typename Tipo> Tipo getBUS(int &ret, const char * name, int bus=0) {
+    return (Tipo) getBUS<Tipo>(ret, 0, name, bus);
   }
 
   /**
    * specialized get run parameter
    */
 
-  template < typename Tipo > Tipo getRUN(int &ret, int elx, const char *name)
-  {
+  template<typename Tipo> Tipo getRUN(int &ret, int elx, const char*name) {
     Tipo val;
-    int lev[2] = { 0, elx };
-    const char *slev[2] = { "run", name };
-    ret = getX(&val, 2, lev, slev);
+    int lev[2]={0,elx};
+    const char *slev[2]={"run",name};
+    ret = getX(&val, 2,lev,slev);
     return (Tipo) val;
   }
 
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getRUN(int &ret, const char *name)
-  {
-    return (Tipo) getRUN < Tipo > (ret, 0, name);
+  template<typename Tipo> Tipo getRUN(int &ret, const char * name) {
+    return (Tipo) getRUN<Tipo>(ret, 0, name);
   }
 
   /**
    * specialized get parameter (on top level)
    */
 
-  template < typename Tipo > Tipo getTop(int &ret, int elx, const char *name)
-  {
+  template<typename Tipo> Tipo getTop(int &ret, int elx, const char *name) {
     Tipo val;
-    int lev[1] = { elx };
-    const char *slev[1] = { name };
-    ret = getX(&val, 1, lev, slev);
+    int lev[1]={elx};
+    const char *slev[1]={name};
+    ret = getX(&val, 1,lev,slev);
     return (Tipo) val;
   }
 
   /**
    * as before, but for scalar
    */
-  template < typename Tipo > Tipo getTop(int &ret, const char *name)
-  {
-    return (Tipo) getTop < Tipo > (ret, 0, name);
+  template<typename Tipo> Tipo getTop(int &ret, const char * name) {
+    return (Tipo) getTop<Tipo>(ret, 0, name);
   }
 
   /**
@@ -737,19 +632,18 @@ indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Ass
    * ret: return error code (0 if success)
    */
 
-  template < typename Tipo > Tipo get(int &ret, std::string srx0, int idx0,
-				      std::string srx1 = "", int idx1 = -1,
-				      std::string srx2 = "", int idx2 = -1,
-				      std::string srx3 = "", int idx3 = -1,
-				      std::string srx4 = "", int idx4 = -1,
-				      std::string srx5 = "", int idx5 = -1,
-				      std::string srx6 = "", int idx6 = -1,
-				      std::string srx7 = "", int idx7 = -1,
-				      std::string srx8 = "", int idx8 = -1)
-  {
+  template<typename Tipo> Tipo get(int &ret,  std::string srx0, int idx0,
+				   std::string srx1="", int idx1=-1,
+				   std::string srx2="", int idx2=-1,
+				   std::string srx3="", int idx3=-1,
+				   std::string srx4="", int idx4=-1,
+				   std::string srx5="", int idx5=-1,
+				   std::string srx6="", int idx6=-1,
+				   std::string srx7="", int idx7=-1,
+				   std::string srx8="", int idx8=-1) {
 
     Tipo val;
-    int dum[9];
+    int  dum[9];
     std::string sdum[9];
     int nlev = 0;
     int i;
@@ -773,15 +667,13 @@ indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Ass
     sdum[7] = srx7;
     sdum[8] = srx8;
 
-    nlev = 0;
-    for (i = 0; i < 9; i++)
-      {
-	if (sdum[i].length() <= 0)
-	  {
-	    break;
-	  }
-	nlev++;
+    nlev=0;
+    for (i=0;i<9;i++) {
+      if (sdum[i].length()<=0) {
+	break;
       }
+      nlev++;
+    }
 
     ret = getX(&val, nlev, dum, sdum);
     return (Tipo) val;
@@ -792,36 +684,19 @@ indent: Standard input:643: Warning:old style assignment ambiguity in "=-".  Ass
    * as before, full scalar setting
    */
 
-  template < typename Tipo > Tipo get(int &ret, std::string srx0,
-				      std::string srx1 = "",
-				      std::string srx2 = "",
-				      std::strindent: Standard input:716: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
+  template<typename Tipo> Tipo get(int &ret,  std::string srx0,
+				   std::string srx1="",
+				   std::string srx2="",
+				   std::string srx3="",
+				   std::string srx4="",
+				   std::string srx5="",
+				   std::string srx6="",
+				   std::string srx7="",
+				   std::string srx8="") {
 
-indent: Standard input:717: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:718: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:719: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:720: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:721: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:722: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-indent: Standard input:723: Warning:old style assignment ambiguity in "=-".  Assuming "= -"
-
-ing srx3 = "",
-				      std::string srx4 = "",
-				      std::string srx5 = "",
-				      std::string srx6 = "",
-				      std::string srx7 = "",
-				      std::string srx8 = "")
-  {
-
-    return (Tipo) get < Tipo > (ret, srx0, 0,
-				srx1, 0, srx2, 0, srx3, 0, srx4, 0,
-				srx5, 0, srx6, 0, srx7, 0, srx8, 0);
+    return (Tipo) get<Tipo>(ret, srx0, 0,
+			    srx1, 0, srx2, 0, srx3, 0, srx4, 0,
+			    srx5, 0, srx6, 0, srx7, 0, srx8, 0);
   }
 
   /**
@@ -837,16 +712,15 @@ ing srx3 = "",
    *
    */
 
-  template < typename Tipo > Tipo get(int &ret, int elx, std::string name,
-				      int idx0 = -1, std::string srx0 = "",
-				      int idx1 = -1, std::string srx1 = "",
-				      int idx2 = -1, std::string srx2 = "",
-				      int idx3 = -1, std::string srx3 = "",
-				      int idx4 = -1, std::string srx4 = "",
-				      int idx5 = -1, std::string srx5 = "",
-				      int idx6 = -1, std::string srx6 = "",
-				      int idx7 = -1, std::string srx7 = "")
-  {
+  template<typename Tipo> Tipo get(int &ret, int elx, std::string name,
+				   int idx0=-1, std::string srx0="",
+				   int idx1=-1, std::string srx1="",
+				   int idx2=-1, std::string srx2="",
+				   int idx3=-1, std::string srx3="",
+				   int idx4=-1, std::string srx4="",
+				   int idx5=-1, std::string srx5="",
+				   int idx6=-1, std::string srx6="",
+				   int idx7=-1, std::string srx7="") {
 
     Tipo val;
     int lev[9], dum[9];
@@ -854,15 +728,15 @@ ing srx3 = "",
     int nlev = 0;
     int i;
 
-    dum[0] = elx;
-    dum[1] = idx0;
-    dum[2] = idx1;
-    dum[3] = idx2;
-    dum[4] = idx3;
-    dum[5] = idx4;
-    dum[6] = idx5;
-    dum[7] = idx6;
-    dum[8] = idx7;
+    dum[0]=elx;
+    dum[1]=idx0;
+    dum[2]=idx1;
+    dum[3]=idx2;
+    dum[4]=idx3;
+    dum[5]=idx4;
+    dum[6]=idx5;
+    dum[7]=idx6;
+    dum[8]=idx7;
     sdum[0] = name;
     sdum[1] = srx0;
     sdum[2] = srx1;
@@ -873,21 +747,18 @@ ing srx3 = "",
     sdum[7] = srx6;
     sdum[8] = srx7;
 
-    nlev = 0;
-    for (i = 0; i < 9; i++)
-      {
-	if ((dum[i] < 0) || (sdum[i].length() <= 0))
-	  {
-	    break;
-	  }
-	nlev++;
+    nlev=0;
+    for (i=0;i<9;i++) {
+      if ((dum[i]<0) || (sdum[i].length()<=0)) {
+	break;
       }
+      nlev++;
+    }
 
-    for (i = 0; i < nlev; i++)
-      {
-	lev[i] = dum[nlev - 1 - i];
-	rdx[i] = sdum[nlev - 1 - i];
-      }
+    for (i=0;i<nlev;i++) {
+      lev[i]=dum[nlev-1-i];
+      rdx[i]=sdum[nlev-1-i];
+    }
 
     ret = getX(&val, nlev, lev, rdx);
     return (Tipo) val;
@@ -902,8 +773,7 @@ ing srx3 = "",
    * return -1 on error
    */
 
-  int replace(const std::string value, std::string path)
-  {
+  int replace(const std::string value, std::string path) {
 
     long int i64;
     int i32;
@@ -911,62 +781,50 @@ ing srx3 = "",
     std::string str;
     bool boo;
 
-    if (cfg.exists(path))
-      {
+    if (cfg.exists(path)) {
 
-	cout << __FUNCTION__ << ": " << path << " will be modified" << endl;
+      cout << __FUNCTION__ << ": " << path << " will be modified" << endl;
 
-	Setting & s1 = cfg.lookup(path);
-	Setting::Type tp = s1.getType();
+      Setting &s1 = cfg.lookup(path);
+      Setting::Type tp = s1.getType();
 
-	switch (tp)
-	  {
-	  case Setting::TypeInt64:
-	    if (s1.getFormat() == Setting::FormatHex)
-	      {
-		from_string < long int >(i64, value, std::hex);
-	      }
-	    else
-	      {
-		from_string < long int >(i64, value, std::dec);
-	      }
-	    s1 = i64;
-	    break;
-	  case Setting::TypeInt:
-	    if (s1.getFormat() == Setting::FormatHex)
-	      {
-		from_string < int >(i32, value, std::hex);
-	      }
-	    else
-	      {
-		from_string < int >(i32, value, std::dec);
-	      }
-	    s1 = i32;
-	    break;
-	  case Setting::TypeFloat:
-	    from_string < float >(flo, value, std::dec);
-	    s1 = flo;
-	    break;
-	  case Setting::TypeString:
-	    s1 = value;
-	    break;
-	  case Setting::TypeBoolean:
-	    from_string < bool > (boo, value, std::dec);
-	    s1 = boo;
-	    break;
-	  default:
-	    cout << __FUNCTION__ << ": " << path <<
-	      " type not recognized, nothing replaced" << endl;
-	    return -1;
-	    break;
-	  }
-      }
-    else
-      {
-	cout << __FUNCTION__ << ": " << path <<
-	  " setting does not exist, nothing replaced" << endl;
+      switch (tp) {
+      case Setting::TypeInt64:
+	if (s1.getFormat() == Setting::FormatHex) {
+	  from_string<long int>(i64, value, std::hex);
+	} else {
+	  from_string<long int>(i64, value, std::dec);
+	}
+	s1 = i64;
+	break;
+      case Setting::TypeInt:
+	if (s1.getFormat() == Setting::FormatHex) {
+	  from_string<int>(i32, value, std::hex);
+	} else {
+	  from_string<int>(i32, value, std::dec);
+	}
+	s1 = i32;
+	break;
+      case Setting::TypeFloat:
+	from_string<float>( flo, value, std::dec);
+	s1 = flo;
+	break;
+      case Setting::TypeString:
+	s1 = value;
+	break;
+      case Setting::TypeBoolean:
+	from_string<bool>( boo, value, std::dec );
+	s1 = boo;
+	break;
+      default:
+	cout << __FUNCTION__ << ": " << path << " type not recognized, nothing replaced" << endl;
 	return -1;
+	break;
       }
+    } else {
+      cout << __FUNCTION__ << ": " << path << " setting does not exist, nothing replaced" << endl;
+      return -1;
+    }
 
     return 0;
 
@@ -976,17 +834,15 @@ ing srx3 = "",
   // Replace setting that are given in the CLI
   //
 
-  int insertInline()
-  {
+  int insertInline() {
 
     int i;
 
-    for (i = 0; i < fargc; i++)
-      {
+    for (i=0;i<fargc;i++) {
 
-	replace(fargv[i], fargp[i]);
+      replace(fargv[i], fargp[i]);
 
-      }
+    }
 
     return 0;
 
@@ -1000,8 +856,7 @@ ing srx3 = "",
   // return <0 if some error (TBD)
   //
 
-  int parseInline(int argc, char *argv[])
-  {
+  int parseInline(int argc, char *argv[]) {
 
     int i;
     char cdummy[1000];
@@ -1009,75 +864,60 @@ ing srx3 = "",
 
     // init
 
-    fargp = new std::string[argc];	// max settings expected
+    fargp = new std::string[argc]; // max settings expected
     fargv = new std::string[argc];
     fargc = 0;
 
     // hardcoded dafault value
 
-    for (i = 1; i < argc; i++)
-      {
+    for (i=1;i<argc; i++) {
 
-	if (strcmp("-cnf", argv[i]) == 0)
-	  {			// config file name, already used
-	    i++;
-	    sprintf(cdummy, "%s", argv[i]);
-	    continue;
-	  }
-
-	if (strcmp("-fun", argv[i]) == 0)
-	  {
-	    printf("\n ------------------- WARNING ---------------------\n");
-	    printf(" This software requires a valid license\n");
-	    printf(" Any abuse will be persecuted by international laws\n");
-	    printf(" Licenses are released by the Author only\n");
-	    printf
-	      (" A single node license costs $ 1,000,000/y + VAT when applicable\n");
-	    printf(" ---------------------------------------------------\n");
-	    exit(0);
-	  }
-
-	if (strcmp("-h", argv[i]) == 0)
-	  {
-	    i++;
-	    printf
-	      (" Command line: %s [-cnf prefix] [-h] [setting=value] ...\n",
-	       argv[0]);
-	    printf("  -cnf prefix    : config parameter file name\n");
-	    printf("  -h             : this help\n");
-	    printf
-	      ("  setting=value  : setting is the path of a libconfig setting, value is the set value; can be repeated\n");
-	    printf(" Example:\n");
-	    printf
-	      ("  %s bus.[0].mpd.[1].adc.[0].clock_phase=3 run.mode=\"event\" run.info=\"This is an example\"\n",
-	       argv[0]);
-
-	    exit(0);
-	  }
-
-	sarg = argv[i];
-
-	cout << __FUNCTION__ << " process inline argument " << sarg << endl;
-
-	size_t found;
-
-	found = sarg.find_first_of("=");
-
-	if (found < std::string::npos)
-	  {
-	    fargp[fargc] = sarg.substr(0, found);
-	    fargv[fargc] = sarg.substr(found + 1, sarg.length());
-	    cout << __FUNCTION__ << " " << i << " / " << fargc << " : " <<
-	      fargp[fargc] << " = " << fargv[fargc] << endl;
-	    fargc++;
-	  }
-	else
-	  {
-	    cout << __FUNCTION__ << " warning: >" << sarg <<
-	      "< attribute looks not properly formed, skipped" << endl;
-	  }
-
+      if (strcmp("-cnf", argv[i]) == 0) { // config file name, already used
+	i++;
+	sprintf(cdummy, "%s", argv[i]);
+	continue;
       }
+
+      if (strcmp("-fun", argv[i]) == 0) {
+	printf("\n ------------------- WARNING ---------------------\n");
+	printf(" This software requires a valid license\n");
+	printf(" Any abuse will be persecuted by international laws\n");
+	printf(" Licenses are released by the Author only\n");
+	printf(" A single node license costs $ 1,000,000/y + VAT when applicable\n");
+	printf(" ---------------------------------------------------\n");
+	exit(0);
+      }
+
+      if (strcmp("-h", argv[i]) == 0) {
+	i++;
+	printf(" Command line: %s [-cnf prefix] [-h] [setting=value] ...\n", argv[0]);
+	printf("  -cnf prefix    : config parameter file name\n");
+	printf("  -h             : this help\n");
+	printf("  setting=value  : setting is the path of a libconfig setting, value is the set value; can be repeated\n");
+	printf(" Example:\n");
+	printf("  %s bus.[0].mpd.[1].adc.[0].clock_phase=3 run.mode=\"event\" run.info=\"This is an example\"\n",argv[0]);
+
+	exit(0);
+      }
+
+      sarg = argv[i];
+
+      cout << __FUNCTION__ << " process inline argument " << sarg << endl;
+
+      size_t found;
+
+      found=sarg.find_first_of("=");
+
+      if (found< std::string::npos) {
+	fargp[fargc]=sarg.substr(0,found);
+	fargv[fargc]=sarg.substr(found+1,sarg.length());
+	cout << __FUNCTION__ << " " << i << " / " << fargc << " : " << fargp[fargc] << " = " << fargv[fargc] << endl;
+	fargc++;
+      } else {
+	cout << __FUNCTION__ << " warning: >" << sarg << "< attribute looks not properly formed, skipped"<< endl;
+      }
+
+    }
 
     return 0;
 
@@ -1087,8 +927,7 @@ ing srx3 = "",
    *
    *
    */
-  template < typename Tipo > int insert(Tipo val, std::string path)
-  {
+  template<typename Tipo> int insert(Tipo val, std::string path) {
 
     long int i64;
     int i32;
@@ -1102,7 +941,7 @@ ing srx3 = "",
 
     std::string sa, sb;
 
-    pos0 = 0;
+    pos0=0;
 
     Setting *se1;
     Setting *se0 = &(cfg.getRoot());
@@ -1111,73 +950,58 @@ ing srx3 = "",
 
     sb = path;
 
-    if (typeid(val) == typeid(i64))
-      {
-	sety = Setting::TypeInt64;
-      }
+    if (typeid(val) == typeid(i64)) {
+      sety = Setting::TypeInt64;
+    }
 
-    if (typeid(val) == typeid(i32))
-      {
-	sety = Setting::TypeInt;
-      }
+    if (typeid(val) == typeid(i32)) {
+      sety = Setting::TypeInt;
+    }
 
-    if (typeid(val) == typeid(flo))
-      {
-	sety = Setting::TypeFloat;
-      }
+    if (typeid(val) == typeid(flo)) {
+      sety = Setting::TypeFloat;
+    }
 
-    if (typeid(val) == typeid(boo))
-      {
-	sety = Setting::TypeBoolean;
-      }
+    if (typeid(val) == typeid(boo)) {
+      sety = Setting::TypeBoolean;
+    }
 
-    if (typeid(val) == typeid(std::string))
-      {
-	sety = Setting::TypeString;
-      }
+    if (typeid(val) == typeid(std::string)) {
+      sety = Setting::TypeString;
+    }
 
     cout << path << " " << typeid(val).name() << endl;
 
-    do
-      {
-	pos1 = sb.find_first_of(".");
-	if (pos1 >= std::string::npos)
-	  {
-	    sa = sb.substr(0, sb.length());
-	    sb = "";
-	  }
-	else
-	  {
-	    sa = sb.substr(0, pos1);
-	    sb = sb.substr(pos1 + 1, sb.length());
-	  }
-
-	cout << pos1 << " " << sa << " / " << sb << endl;
-
-	if (!se0->exists(sa))
-	  {
-	    if (sb.length() > 0)
-	      {
-		se1 = &(se0->add(sa, Setting::TypeGroup));
-	      }
-	    else
-	      {
-		se1 = &(se0->add(sa, sety));
-	      }
-	    se0 = se1;
-	  }
+    do {
+      pos1=sb.find_first_of(".");
+      if (pos1>= std::string::npos) {
+	sa = sb.substr(0,sb.length());
+	sb = "";
+      } else {
+	sa = sb.substr(0,pos1);
+	sb = sb.substr(pos1+1,sb.length());
       }
-    while (pos1 < std::string::npos);
 
-    if (se1)
-      {
-	Setting & se = *se1;
-	se = val;
+      cout << pos1 << " " << sa << " / " << sb << endl;
+
+      if (!se0->exists(sa)) {
+	if (sb.length()>0) {
+	  se1 = &(se0->add(sa, Setting::TypeGroup));
+	} else {
+	  se1 = &(se0->add(sa, sety));
+	}
+	se0 = se1;
       }
+    } while (pos1< std::string::npos);
+
+    if (se1) {
+      Setting &se = *se1;
+      se = val;
+    }
 
     cout << se1->getPath() << endl;
 
-    return 0;
+    return 0 ;
   }
 
 
@@ -1185,10 +1009,9 @@ ing srx3 = "",
    *
    */
 
-  int navigate()
-  {
+  int navigate() {
 
-    const Setting & ss = cfg.getRoot();
+    const Setting &ss = cfg.getRoot();
 
     nav(ss);
 
