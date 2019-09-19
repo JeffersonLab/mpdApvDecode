@@ -1,6 +1,8 @@
 //  class decconfig
 //    Class to handle configuring the output of mpddata
 //
+#ifndef __DECCONFIG__
+#define __DECCONFIG__
 #include <GI_Config.h>
 #include <stdint.h>
 
@@ -19,6 +21,8 @@ public:
   uint16_t apvmask();
   uint16_t minimum_baseline();
   uint16_t maximum_baseline();
+
+  void show_no_data(int enable);
 
   bool show_block_header(int mpd);
   bool show_block_trailer(int mpd);
@@ -45,6 +49,8 @@ public:
 private:
   GI_Config *cfg;
   uint8_t current_rocnum;
-
+  bool showOverride;
 
 };
+
+#endif // __DECCONFIG__

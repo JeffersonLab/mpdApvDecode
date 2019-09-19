@@ -17,6 +17,7 @@
 #include "evioFileChannel.hxx"
 #include "evioBankIndex.hxx"
 #include "mpddata.hh"
+#include "decconfig.hh"
 
 using namespace evio;
 using namespace std;
@@ -64,11 +65,10 @@ int
 main(int argc, char **argv)
 {
   InputParser input(argc, argv);
-  int32_t rocnum = 4, mpdtag = 10, mpdnum = 0;
   uint64_t max_eventnumber = -1, skip_eventnumber = 0;
   string evio_filename,
-    config_filename = "mpdApvDecode.cfg", out_filename = "out.dec";
-  int showData = 1;
+    config_filename = "decode.cfg", out_filename = "out.dec";
+  bool showNoData = false;
 
   if (input.cmdOptionExists("-f"))
     {
@@ -97,7 +97,7 @@ main(int argc, char **argv)
 
   if (input.cmdOptionExists("-e"))
     {
-      showData = 0;
+      showNoData = true;
     }
 
   if (evio_filename.empty())
@@ -122,15 +122,18 @@ main(int argc, char **argv)
     uint32_t *buffer, blen;
     evioDictEntry tn;
 
+    decconfig *cfg = new decconfig(config_filename);
+    cfg->show_no_data(showNoData);
+
     mpddata *mdat[16];
     for(int iroc = 0; iroc < 16; iroc++)
       {
-	mdat[iroc] = new mpddata();
-    	mdat[iroc]->ShowData(showData);
+	mdat[iroc] = new mpddata(*cfg);
     	mdat[iroc]->ClearStats();
       }
 
 
+    int32_t rocnum = 4, mpdtag = 10, mpdnum = 0;
     while (chan->readAlloc((uint32_t **) & buffer, &blen))
       {
 	uint64_t eventNumber = 0;

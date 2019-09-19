@@ -17,6 +17,7 @@ decconfig::decconfig(std::string filename = "decode.cfg")
   current_rocnum = -1;
   cfg = new GI_Config();
   cfg->parseFile(filename);
+  showOverride = true;
 }
 
 decconfig::~decconfig()
@@ -57,85 +58,120 @@ decconfig::maximum_baseline()
   return val;
 }
 
+void
+decconfig::show_no_data(int enable)
+{
+  if(enable)
+    showOverride = false;
+}
+
 bool
 decconfig::show_block_header(int mpd)
 {
-  int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "block_header", current_rocnum, mpd);
 
-  return val;
+  int ret = 0;
+  bool val = false;
+
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getShow<bool>(ret, "block_header", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_block_trailer(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "block_trailer", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getShow<bool>(ret, "block_trailer", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_event_header(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "event_header", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getShow<bool>(ret, "event_header", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_trigger_time(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "trigger_time", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getShow<bool>(ret, "trigger_time", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_apv_header(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "apv_header", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getShow<bool>(ret, "apv_header", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_apv_data(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "apv_data", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getShow<bool>(ret, "apv_data", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_apv_trailer(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "apv_trailer", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getShow<bool>(ret, "apv_trailer", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_event_trailer(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "event_trailer", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getShow<bool>(ret, "event_trailer", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 bool
 decconfig::show_filler_word(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getShow<bool>(ret, "filler_word", current_rocnum, mpd);
+  bool val = false;
 
-  return val;
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getShow<bool>(ret, "filler_word", current_rocnum, mpd);
+
+  return (val & showOverride);
 }
 
 
@@ -143,7 +179,10 @@ bool
 decconfig::check_apvmask(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "apvmask", current_rocnum, mpd);
+  bool val = false;
+
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getCheck<bool>(ret, "apvmask", current_rocnum, mpd);
 
   return val;
 }
@@ -152,7 +191,10 @@ bool
 decconfig::check_napv(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "napv", current_rocnum, mpd);
+  bool val = false;
+
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getCheck<bool>(ret, "napv", current_rocnum, mpd);
 
   return val;
 }
@@ -161,7 +203,10 @@ bool
 decconfig::check_event_count(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "event_count", current_rocnum, mpd);
+  bool val = false;
+
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getCheck<bool>(ret, "event_count", current_rocnum, mpd);
 
   return val;
 }
@@ -170,7 +215,10 @@ bool
 decconfig::check_ndata(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "ndata", current_rocnum, mpd);
+  bool val = false;
+
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getCheck<bool>(ret, "ndata", current_rocnum, mpd);
 
   return val;
 }
@@ -179,7 +227,10 @@ bool
 decconfig::check_sample_count(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "sample_count", current_rocnum, mpd);
+  bool val = false;
+
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getCheck<bool>(ret, "sample_count", current_rocnum, mpd);
 
   return val;
 }
@@ -188,7 +239,10 @@ bool
 decconfig::check_frame_count(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "frame_count", current_rocnum, mpd);
+  bool val = false;
+
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getCheck<bool>(ret, "frame_count", current_rocnum, mpd);
 
   return val;
 }
@@ -197,7 +251,10 @@ bool
 decconfig::check_baseline_value(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "baseline_value", current_rocnum, mpd);
+  bool val = false;
+
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getCheck<bool>(ret, "baseline_value", current_rocnum, mpd);
 
   return val;
 }
@@ -206,7 +263,10 @@ bool
 decconfig::check_word_count(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "word_count", current_rocnum, mpd);
+  bool val = false;
+
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getCheck<bool>(ret, "word_count", current_rocnum, mpd);
 
   return val;
 }
@@ -215,7 +275,10 @@ bool
 decconfig::check_n_words_in_event(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "n_words_in_event", current_rocnum, mpd);
+  bool val = false;
+
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getCheck<bool>(ret, "n_words_in_event", current_rocnum, mpd);
 
   return val;
 }
@@ -224,7 +287,10 @@ bool
 decconfig::check_n_words_in_block(int mpd)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "n_words_in_block", current_rocnum, mpd);
+  bool val = false;
+
+  if( (1 << mpd) & mpdmask() )
+    val = cfg->getCheck<bool>(ret, "n_words_in_block", current_rocnum, mpd);
 
   return val;
 }
@@ -233,7 +299,10 @@ bool
 decconfig::check_data_count(int mpd, int apv)
 {
   int ret = 0;
-  bool val = cfg->getCheck<bool>(ret, "data_count", current_rocnum, mpd);
+  bool val = false;
+
+  if( ((1 << mpd) & mpdmask() ) && ((1 << apv) & apvmask() ))
+    val = cfg->getCheck<bool>(ret, "data_count", current_rocnum, mpd);
 
   return val;
 }

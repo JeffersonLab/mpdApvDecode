@@ -5,9 +5,10 @@
 #ifndef __MPDDEC__
 #define __MPDDEC__
 #include <stdint.h>
+#include "decconfig.hh"
 
 #define DEC_ERR(format, ...) {						\
-    fprintf(stdout,"%s: ERROR: ",__func__); fprintf(stdout,format, ## __VA_ARGS__);}
+    fprintf(stdout,"# ERROR: "); fprintf(stdout,format, ## __VA_ARGS__);}
 
 
 class mpddata
@@ -227,58 +228,11 @@ public:
   uint32_t mpdmask;
   uint16_t nmpd;
 
-  // These will be added to their own class using libconfig
-  int check_apvmask;
-  int check_napv;
-  int check_event_count;
-  int check_ndata;
-  int check_sample_count;
-  int check_frame_count;
-  int check_baseline_value;
-  int check_word_count;
-  int check_n_words_in_event;
-  int check_n_words_in_block;
-  int check_data_count;
+  decconfig *cfg;
 
-  int show_block_header;
-  int show_block_trailer;
-  int show_event_header;
-  int show_trigger_time;
-  int show_apv_header;
-  int show_apv_data;
-  int show_apv_trailer;
-  int show_event_trailer;
-  int show_filler_word;
-
-  int minimum_baseline;
-  int maximum_baseline;
-
-  mpddata()
+  mpddata(decconfig &acfg)
   {
-    check_apvmask=1;
-    check_napv=1;
-    check_event_count=1;
-    check_ndata=1;
-    check_sample_count=1;
-    check_frame_count=1;
-    check_baseline_value=1;
-    check_word_count=1;
-    check_n_words_in_event=1;
-    check_n_words_in_block=1;
-    check_data_count=1;
-
-    show_block_header=1;
-    show_block_trailer=1;
-    show_event_header=1;
-    show_trigger_time=1;
-    show_apv_header=1;
-    show_apv_data=1;
-    show_apv_trailer=1;
-    show_event_trailer=1;
-    show_filler_word=1;
-
-    minimum_baseline = 100;
-    maximum_baseline = 1900;
+    cfg = &acfg;
   };
 
   int ShowData(int enable);
