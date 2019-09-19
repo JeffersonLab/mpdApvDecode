@@ -12,7 +12,7 @@ EVIO_LIB = ${CODA}/Linux-$(ARCH)/lib
 CC	= g++
 CFLAGS	= -I. -I${EVIO_INC} \
 		-L. -L${EVIO_LIB} \
-		-levio -levioxx -lrt -lexpat
+		-levio -levioxx -lrt -lexpat -lconfig++
 CFLAGS	+= -g -Wall
 
 PROG	= mpdApvDecode
