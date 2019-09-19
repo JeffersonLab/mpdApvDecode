@@ -45,7 +45,7 @@ uint16_t
 decconfig::minimum_baseline()
 {
   int ret = 0;
-  uint16_t val = (cfg->getSet<uint32_t>(ret, "minbaseline", current_rocnum) & 0xFFFF);
+  uint16_t val = (cfg->getSet<uint32_t>(ret, "minimum_baseline", current_rocnum) & 0xFFFF);
   return val;
 }
 
@@ -53,7 +53,7 @@ uint16_t
 decconfig::maximum_baseline()
 {
   int ret = 0;
-  uint16_t val = (cfg->getSet<uint32_t>(ret, "maxbaseline", current_rocnum) & 0xFFFF);
+  uint16_t val = (cfg->getSet<uint32_t>(ret, "maximum_baseline", current_rocnum) & 0xFFFF);
   return val;
 }
 
