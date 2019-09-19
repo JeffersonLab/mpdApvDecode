@@ -1,6 +1,7 @@
-/* configure.cpp
+/* TConfig.cpp
+   Test reading of decode.cfg with decconfig class
 
-   g++ -Wall -I ../include -L/usr/local/lib -lconfig++ TConfig.cpp
+   g++ -Wall -I -lconfig++ TConfig.cpp decconfig.o
 
 */
 
@@ -9,7 +10,7 @@
 #include <cstdlib>
 #include <string.h>
 
-#include "GI_Config.h"
+#include "decconfig.hh"
 
 using namespace std;
 using namespace libconfig;
@@ -21,78 +22,32 @@ using namespace libconfig;
 int main(int argc, char *argv[]) {
 
 
-  GI_Config *cfg = new GI_Config();
+  decconfig *cfg = new decconfig("decode.cfg");
 
- 
+
   int ret;
-
-  int val;
-  std::string sval;
-
-
-  cfg->parseInline(argc, argv);
-
-
-  cout << " parse arguments " << endl;
-
-  cfg->parseFile("../cfg/config_new.txt");
-
-  cout << " Try replace" << endl;
-
-  cfg->replace("12", "default.bus.[0].mpd.[0].adc.gain");
-
-  cfg->insertInline();
-
-
-  cout << " Insert" << endl;
-
-  cfg->insert<int>(13, "prova.level1.niveau2.int");
-
-  cfg->insert<float>(13.2, "ppinco.pallo.float");
-
-  cfg->insert<std::string>("stringa", "ppinco.pallo.string");
-
-  cfg->navigate();
-
   cout << " Test some methods: " << endl;
 
-  val = cfg->getMPDLength(0);
-  cout << " ... mpd elements = " << val << endl;
+  bool isIt = cfg->show_block_header(1);
+  cout << " ...show_block_header = " << (isIt ? "true" : "false") << endl;
 
-  val = cfg->getAPV<int>(ret, "Ipsf",18,1,0);
+  uint32_t val;
 
-  cout << " ...apv.Ipsf = " << val << " " << ret << endl;
+  val = cfg->mpdmask();
+  cout << "... mpdmask = " << hex << val << endl;
 
-  val = cfg->getAPV<int>(ret, "i2c", 4, 0);
-  cout << " ...apv.i2c = " << val << " " << ret << endl;
+  val = cfg->apvmask();
+  cout << "... apvmask = " << hex << val << endl;
 
-  sval = cfg->getBUS<std::string>(ret, "controller");
-  cout << " bus.controller = " << sval.data() << " " << ret << endl;
+  val = cfg->minimum_baseline();
+  cout << "... minimum_baseline = " << dec << val << endl;
 
-  sval = cfg->getTop<std::string>(ret, "version");
-  cout << " version = " << sval.data() << " "  << ret << endl;
-
-  sval = cfg->getRUN<std::string>(ret, "mode");
-  cout << " run.mode= " << sval << " " << ret << endl;
-
-  val = cfg->getADC<int>(ret, "gain", 1, 2);
-  cout << " mpd.adc.gain= " << val << " " << ret << endl;
-
-  val = cfg->get<int>(ret, "bus", 0, "mpd", 0, "adc", 0, "gain", 0);
-  cout << " bus.mpd.adc.gain= " << val << " " << ret << endl;
-
-  val = cfg->get<int>(ret, "bus", "mpd", "adc", "gain");
-  cout << " bus.mpd.adc.gain (scalar)= " << val << " " << ret << endl;
-
-  sval = cfg->get<std::string>(ret, "time");
-  cout << " time= " << sval << " " << ret << endl;
-
-  val = cfg->get<int>(ret, "bus", 0, "mpd", 1, "adc", 0, "gain", 0);
-  cout << " bus.mpd[1].adc.gain= " << val << " " << ret << endl;
-
-  val = cfg->getAPV<int>(ret, "iii", 0, 0, 0);
-  cout << " apv.iiix = " << val << " " << ret << endl;
+  val = cfg->maximum_baseline();
+  cout << "... maximum_baseline = " << dec << val << endl;
 
   return 0;
-  
+
+  if(ret) {}
+
+  if(val) {}
 }

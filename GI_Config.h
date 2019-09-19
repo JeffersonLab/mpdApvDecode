@@ -243,6 +243,9 @@ class GI_Config {
 
     return berr;
 
+    // Remove the compilat
+    if(bs[0])
+      return berr;
   }
 
   //
@@ -467,6 +470,31 @@ class GI_Config {
     }
 
   }
+
+  template<typename Tipo> Tipo getShow(int &ret, const char * name, int roc, int set = 0) {
+    Tipo val;
+    int lev[4]={roc,set,0,0};
+    const char *slev[4]={"roc","set","show",name};
+    ret = getX(&val, 4, lev, slev);
+    return (Tipo) val;
+  }
+
+  template<typename Tipo> Tipo getCheck(int &ret, const char * name, int roc, int set = 0) {
+    Tipo val;
+    int lev[4]={roc,set,0,0};
+    const char *slev[4]={"roc","set","check",name};
+    ret = getX(&val, 4, lev, slev);
+    return (Tipo) val;
+  }
+
+  template<typename Tipo> Tipo getSet(int &ret, const char * name, int roc, int set = 0) {
+    Tipo val;
+    int lev[3]={roc,set,0};
+    const char *slev[3]={"roc","set",name};
+    ret = getX(&val, 3, lev, slev);
+    return (Tipo) val;
+  }
+
 
   /**
    * specialized get bus.mpd.apv parameter (can be an array element)

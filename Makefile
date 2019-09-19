@@ -19,10 +19,13 @@ PROG	= mpdApvDecode
 SRC     = $(wildcard *.cc)
 OBJ     = ${SRC:.cc=.o}
 
-all: echoarch $(PROG)
+all: echoarch $(PROG) TConfig
 
 $(PROG): $(OBJ)
 	$(CC) $(CFLAGS) -o $@ $(OBJ)
+
+TConfig: TConfig.cpp decconfig.o
+	$(CC) $(CFLAGS) -o $@ $< decconfig.o
 
 %.o: %.cc
 	$(CC) $(CFLAGS) -c -o $@ $<

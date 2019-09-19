@@ -15,6 +15,11 @@ public:
     current_rocnum = rocnum;
   }
 
+  uint32_t mpdmask();
+  uint16_t apvmask();
+  uint16_t minimum_baseline();
+  uint16_t maximum_baseline();
+
   bool show_block_header(int mpd);
   bool show_block_trailer(int mpd);
   bool show_event_header(int mpd);
@@ -36,9 +41,6 @@ public:
   bool check_n_words_in_event(int mpd);
   bool check_n_words_in_block(int mpd);
   bool check_data_count(int mpd, int apv);
-
-  int minimum_baseline();
-  int maximum_baseline();
 
 private:
   GI_Config *cfg;
