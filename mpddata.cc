@@ -1,3 +1,15 @@
+//  class mpddata
+//    Class to handle decoding of MPD and APV data.
+//
+//   Usage:
+//     mpddata mdat = new mdata();
+//     mdat->DecodeWord(uint32_t *buffer, int len);
+//
+//  Author: Bryan Moffit
+//          Jefferson Lab Data Acquisition Group
+//          September 2019
+//
+
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>
@@ -306,8 +318,6 @@ mpddata::DecodeWord(uint32_t data)
 		       dt.bf.word_count);
 	      }
 
-	    // FIXME: Compare these values before overwritting
-	    // Check that word_count - data_count = 4.
 	    // Checks
 	    if(mpd[modID_current].have_stats & check_baseline_value)
 	      {
@@ -328,6 +338,17 @@ mpddata::DecodeWord(uint32_t data)
 			    modID_current, apvID_current,
 			    dt.bf.word_count,
 			    mpd[modID_current].apv[apvID_current].word_count);
+		  }
+	      }
+
+	    if(mpd[modID_current].have_stats & check_data_count)
+	      {
+		if(dt.bf.word_count - data_count != 4)
+		  {
+		    DEC_ERR("%2d: APV%2d: word_count - data_count != 4 (%d - %d != 4)\n",
+			    modID_current, apvID_current,
+			    dt.bf.word_count,
+			    data_count);
 		  }
 	      }
 

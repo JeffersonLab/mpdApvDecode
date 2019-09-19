@@ -1,13 +1,14 @@
+//  mpdApvDecode
+//    Program to decode MPD and APV data taken with CODA.
+//
+//  Author: Bryan Moffit
+//          Jefferson Lab Data Acquisition Group
+//          September 2019
+//
+// original source taken from
 // parses event using stream parser
-
-// builds a tree from selected nodes
-// builds an index to banks in the event, searches index for particular banks
-
-// in principle more than one bank may have the same tagNum,
-//   in this case must use the getRange() method to get them all, see Doxygen doc
-
-
-// ejw, 1-may-2012
+//   evio-4.3/src/examples/etst12.cc
+//   ejw, 1-may-2012
 
 
 #include <iostream>
