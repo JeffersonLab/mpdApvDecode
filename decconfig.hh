@@ -17,12 +17,15 @@ public:
     current_rocnum = rocnum;
   }
 
+  uint8_t mpd_bank_tag();
+  uint8_t mpd_bank_num();
   uint32_t mpdmask();
   uint16_t apvmask();
   uint16_t minimum_baseline();
   uint16_t maximum_baseline();
 
   void show_no_data(int enable);
+
 
   bool show_block_header(int mpd);
   bool show_block_trailer(int mpd);

@@ -495,6 +495,14 @@ class GI_Config {
     return (Tipo) val;
   }
 
+  template<typename Tipo> Tipo getRoc(int &ret, const char * name, int roc) {
+    Tipo val;
+    int lev[2]={roc,0};
+    const char *slev[2]={"roc",name};
+    ret = getX(&val, 2, lev, slev);
+    return (Tipo) val;
+  }
+
 
   /**
    * specialized get bus.mpd.apv parameter (can be an array element)

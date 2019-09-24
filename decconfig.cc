@@ -25,6 +25,21 @@ decconfig::~decconfig()
   delete cfg;
 }
 
+uint8_t
+decconfig::mpd_bank_tag()
+{
+  int ret = 0;
+  uint8_t val = cfg->getRoc<uint32_t>(ret, "mpd_bank_tag", current_rocnum);
+  return val;
+}
+
+uint8_t
+decconfig::mpd_bank_num()
+{
+  int ret = 0;
+  uint8_t val = cfg->getRoc<uint32_t>(ret, "mpd_bank_num", current_rocnum);
+  return val;
+}
 
 uint32_t
 decconfig::mpdmask()
