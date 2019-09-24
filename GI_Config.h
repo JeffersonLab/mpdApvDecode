@@ -503,6 +503,14 @@ class GI_Config {
     return (Tipo) val;
   }
 
+  /* Return number of ROC elements
+   */
+  int getROCLength() {
+    int lev[1]={0};
+    const char *slev[1]={"roc"};
+    return getLength(1, lev, slev);
+  }
+
 
   /**
    * specialized get bus.mpd.apv parameter (can be an array element)

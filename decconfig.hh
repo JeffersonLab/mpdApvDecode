@@ -14,7 +14,20 @@ public:
 
   void set_roc_number(int rocnum)
   {
-    current_rocnum = rocnum;
+    int len = cfg->getROCLength();
+    int val = 0, ret = 0;;
+
+    rocIndex = -1;
+    for (int iroc = 0; iroc < len; iroc++)
+      {
+	val = cfg->getRoc<uint32_t>(ret, "rocnum", iroc);
+	if(val == rocnum)
+	  {
+	    rocIndex = iroc;
+	    break;
+	  }
+      }
+
   }
 
   uint8_t mpd_bank_tag();
@@ -51,7 +64,7 @@ public:
 
 private:
   GI_Config *cfg;
-  uint8_t current_rocnum;
+  uint8_t rocIndex;
   bool showOverride;
 
 };
