@@ -236,34 +236,52 @@ main(int argc, char **argv)
 	    printf("# %6d: evType = %d   eventTimestamp = 0x%lx \n",
 		   (uint32_t) eventNumber, evType, eventTimestamp);
 
-	    int rocnum = 4;
-	    if(rocBiMap.find(rocnum) == rocBiMap.end())
-	      {
-		cout << "#  NO ROC " << rocnum << endl;
-		continue;
-	      }
-
-	    evioBankIndex ebi_roc((uint32_t *)rocBiMap.find(4)->second.bankPointer,0);
 	    // Get the ROC / Payload data
-	    int32_t mpdtag = 10, mpdnum = 0;
-	    tn = evioDictEntry(mpdtag, mpdnum);
+	    map <int, bankIndex>::iterator rocIter;
 
-	    d32 = ebi_roc.getData < uint32_t > (tn, &len);
+	    for(rocIter = rocBiMap.begin(); rocIter != rocBiMap.end(); ++rocIter)
+	      {
+		int rocnum = rocIter->first;
+		cfg->set_roc_number(rocnum);
 
-	    if (d32 != NULL)
-	      {
-		printf("#      ROC %2d MPD+APV Data\n",
-		       rocnum);
-		mdat[rocnum]->DecodeBuffer(d32, len);
+		uint32_t mpdtag = cfg->mpd_bank_tag();
+		uint16_t mpdnum = cfg->mpd_bank_num();
+
+#ifdef DEBUG_BANKS
+		cout << "# roc = "
+		     << dec << rocnum
+		     << "  mpdmask = 0x"
+		     << hex << cfg->mpdmask()
+		     << "  apvmask = 0x"
+		     << hex << cfg->apvmask() << endl;
+#endif // DEBUG_BANKS
+
+		// evioBankIndex ebi_roc((uint32_t *)rocBiMap.find(4)->second.bankPointer,0);
+		evioBankIndex ebi_roc((uint32_t *)rocIter->second.bankPointer,0);
+		tn = evioDictEntry(mpdtag, mpdnum);
+
+		d32 = ebi_roc.getData < uint32_t > (tn, &len);
+
+		if (d32 != NULL)
+		  {
+		    printf("#      ROC %2d MPD+APV Data\n",
+			   rocnum);
+		    mdat[rocnum]->DecodeBuffer(d32, len);
+		  }
+		else
+		  {
+		    printf("#      NO ROC %2d d32 !!! \n",
+			   rocnum);
+		  }
 	      }
-	    else
-	      {
-		printf("#      NO ROC %2d d32 !!! \n",
-		       rocnum);
-	      }
+	    free(buffer);
 
 	  }
-	free(buffer);
+	else
+	  {
+	    free(buffer);
+	    break;
+	  }
       }
 
 
