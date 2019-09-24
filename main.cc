@@ -133,6 +133,8 @@ main(int argc, char **argv)
       }
 
 
+    bool stop = false;
+
     while (chan->readAlloc((uint32_t **) &buffer, &blen))
       {
 	uint64_t eventNumber = 0;
@@ -143,95 +145,123 @@ main(int argc, char **argv)
 	const uint16_t *d16;
 
 	evioBankIndex ebi(buffer,1);
-
 	bankIndexMap::const_iterator b_iter;
 
-	// Get the tag numbers that are not FF50 or FF21
-	// These should be the ROC banks.
-	bankIndex bi_roc;
+	int len;
+	bankIndex bi_trigger, bi_roc;
 	map <int, bankIndex> rocBiMap;
-	for(b_iter = ebi.tagNumMap.begin(); b_iter != ebi.tagNumMap.end();
-	    b_iter++)
+
+	memset(&bi_trigger, 0, sizeof(bi_trigger));
+	memset(&bi_roc, 0, sizeof(bi_roc));
+
+	if (version < 4)
 	  {
-	    if((b_iter->first.getTag() != 0xFF50) &&
-	       (b_iter->first.getTag() != 0xFF21))
+	    for(b_iter = ebi.tagNumMap.begin(); b_iter != ebi.tagNumMap.end();
+		b_iter++)
 	      {
 #define DEBUG_BANKS
 #ifdef DEBUG_BANKS
-		cout << "In bi: tag = 0x" << hex << b_iter->first.getTag()
+		cout << "#  In bi: tag = 0x" << hex << b_iter->first.getTag()
 		     << " type = 0x" << hex << b_iter->second.contentType << endl;
 #endif
-		rocBiMap.insert( pair <int, bankIndex>(b_iter->first.getTag(), b_iter->second) );
-		bi_roc = b_iter->second;
-	      }
-	  }
+		switch (b_iter->first.getTag())
+		  {
+		  case 0xC000: // Event Bank
+		    d32 = ebi.getData < uint32_t > (tn, &len);
+		    if (d32 != NULL)
+		      {
+			eventNumber = (uint32_t) d32[0];
+			evType = (uint32_t) d32[1];
+		      }
+		    break;
 
-	int len;
-	if (version < 4)
-	  {
-	    tn = evioDictEntry(0xC000, 0);
-	    d32 = ebi.getData < uint32_t > (tn, &len);
-	    if (d32 != NULL)
-	      {
-		eventNumber = (uint32_t) d32[0];
-		evType = (uint32_t) d32[1];
+		  default: // ROC Banks
+		    rocBiMap.insert( pair <int, bankIndex>(b_iter->first.getTag(), b_iter->second) );
+		    bi_roc = b_iter->second;
+
+		  }
 	      }
 	  }
 	else
 	  {
-	    tn = evioDictEntry(0xFF21,   // Trigger Bank Tag
-			       1 ); // bank num
-
-	    if(!ebi.tagNumExists(tn))
-	      {
-		continue;
-	      }
-
-	    bankIndex bi_trigbank = ebi.getBankIndex(tn);
-	    evioBankIndex bi_triggerbank((uint32_t *)bi_trigbank.bankPointer, 4);
-
-	    evioBankIndex bi_evTypeBank;
-	    for(b_iter = bi_triggerbank.tagNumMap.begin(); b_iter != bi_triggerbank.tagNumMap.end();
+	    for(b_iter = ebi.tagNumMap.begin(); b_iter != ebi.tagNumMap.end();
 		b_iter++)
 	      {
-		if((b_iter->first.getTag() == 0x2) &&
-		   (b_iter->second.contentType == EVIO_USHORT16))
+#ifdef DEBUG_BANKS
+		cout << "#  In bi: tag = 0x" << hex << b_iter->first.getTag()
+		     << " type = 0x" << hex << b_iter->second.contentType << endl;
+#endif
+		switch (b_iter->first.getTag())
 		  {
-		    d16 = (uint16_t *)b_iter->second.data;
-		    len = b_iter->second.dataLength;
-		    if (d16 != NULL)
-		      {
-			evType = d16[0];
-		      }
+		  case 0xFF50: // Event Bank
+		    break;
+
+		  case 0xFF21: // Trigger Bank
+		    bi_trigger = b_iter->second;
+		    break;
+
+		  default: // ROC Banks
+		    rocBiMap.insert( pair <int, bankIndex>(b_iter->first.getTag(), b_iter->second) );
+		    bi_roc = b_iter->second;
+
 		  }
 	      }
 
-	    tn = evioDictEntry(0x2,  // Eventnumber/timestamp Bank Tag=0x2
-			       0, // num
-			       0, // tag en
-			       EVIO_ULONG64,
-			       true,
-			       "",
-			       "");
-
-
-	    if(!bi_triggerbank.tagNumExists(tn))
+	    if(bi_trigger.bankLength > 0)
 	      {
-		continue;
-	      }
+		evioBankIndex ebi_trigger((uint32_t *)bi_trigger.bankPointer, 4);
 
-	    d64 = bi_triggerbank.getData < uint64_t > (tn, &len);
-	    if (d64 != NULL)
-	      {
-		eventNumber = d64[0];
-		eventTimestamp = d64[1];
-	      }
+		for(b_iter = ebi_trigger.tagNumMap.begin();
+		    b_iter != ebi_trigger.tagNumMap.end();
+		    b_iter++)
+		  {
+		    if((b_iter->first.getTag() == 0x2) &&
+		       (b_iter->second.contentType == EVIO_USHORT16))
+		      {
+			d16 = (uint16_t *)b_iter->second.data;
+			len = b_iter->second.dataLength;
+			if (d16 != NULL)
+			  {
+			    evType = d16[0];
+#ifdef DEBUG_BANKS
+			    cout << "#  evType = " << dec << evType << endl;
+#endif // DEBUG_BANKS
 
+			  }
+		      }
+		  }
+
+
+		tn = evioDictEntry(0x2,  // Eventnumber/timestamp Bank Tag=0x2
+				   0, // num
+				   0, // tag en
+				   EVIO_ULONG64,
+				   true,
+				   "",
+				   "");
+
+		if(!ebi_trigger.tagNumExists(tn))
+		  {
+		    continue;
+		  }
+
+		d64 = ebi_trigger.getData < uint64_t > (tn, &len);
+		if (d64 != NULL)
+		  {
+		    eventNumber = d64[0];
+		    eventTimestamp = d64[1];
+#ifdef DEBUG_BANKS
+		    cout << "#  eventNumber = " << dec << eventNumber
+			 << "  eventTimestamp = " << hex << eventTimestamp
+			 << endl;
+#endif // DEBUG_BANKS
+		  }
+
+	      }
 	  }
 
-	// Check to see if this event falls into the user specified range
-	if ((eventNumber > skip_eventnumber)
-	    && (eventNumber <= max_eventnumber))
+	// Check to see if this event is skipped
+	if (eventNumber > skip_eventnumber)
 	  {
 	    printf("# %6d: evType = %d   eventTimestamp = 0x%lx \n",
 		   (uint32_t) eventNumber, evType, eventTimestamp);
@@ -256,7 +286,6 @@ main(int argc, char **argv)
 		     << hex << cfg->apvmask() << endl;
 #endif // DEBUG_BANKS
 
-		// evioBankIndex ebi_roc((uint32_t *)rocBiMap.find(4)->second.bankPointer,0);
 		evioBankIndex ebi_roc((uint32_t *)rocIter->second.bankPointer,0);
 		tn = evioDictEntry(mpdtag, mpdnum);
 
@@ -270,16 +299,22 @@ main(int argc, char **argv)
 		  }
 		else
 		  {
-		    printf("#      NO ROC %2d d32 !!! \n",
-			   rocnum);
+		    printf("#      NO ROC %2d data found for mpdtag = %d  mpdnum = %d \n",
+			   rocnum,
+			   mpdtag, mpdnum);
 		  }
 	      }
-	    free(buffer);
-
 	  }
-	else
+
+	if (eventNumber == max_eventnumber)
 	  {
-	    free(buffer);
+	    stop = true;
+	  }
+
+	free(buffer);
+
+	if(stop)
+	  {
 	    break;
 	  }
       }
@@ -289,10 +324,10 @@ main(int argc, char **argv)
       delete mdat[iroc];
   }
   catch(evioException e)
-  {
-    cerr << e.toString() << endl;
-    exit(EXIT_FAILURE);
-  }
+    {
+      cerr << e.toString() << endl;
+      exit(EXIT_FAILURE);
+    }
 
   exit(0);
   printf("%s", DataTypeNames[0]);
