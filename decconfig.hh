@@ -21,10 +21,11 @@ public:
     for (int iroc = 0; iroc < len; iroc++)
       {
 	val = cfg->getRoc<uint32_t>(ret, "rocnum", iroc);
-	if(val == rocnum)
+
+	if(val == (int)rocnum)
 	  {
-	    rocIndex = iroc;
-	    break;
+	    rocIndex = (int)iroc;
+	    return;
 	  }
       }
 
@@ -64,7 +65,7 @@ public:
 
 private:
   GI_Config *cfg;
-  uint8_t rocIndex;
+  int rocIndex;
   bool showOverride;
 
 };
