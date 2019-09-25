@@ -48,7 +48,7 @@ mpddata::DecodeWord(uint32_t data)
 
 	if(cfg->show_block_header(d.bf.module_id))
 	  {
-	    printf("%08X - BLOCK HEADER - modID = %d   event_per_block = %d   block_count = %d\n",
+	    DEC_SHOW("%08X - BLOCK HEADER - modID = %d   event_per_block = %d   block_count = %d\n",
 		   d.raw,
 		   d.bf.module_id,
 		   d.bf.event_per_block,
@@ -70,7 +70,7 @@ mpddata::DecodeWord(uint32_t data)
 
 	if(cfg->show_block_trailer(modID_current))
 	  {
-	    printf("%08X - BLOCK TRAILER - n_words_in_block = %d\n",
+	    DEC_SHOW("%08X - BLOCK TRAILER - n_words_in_block = %d\n",
 		   d.raw,
 		   d.bf.n_words_in_block);
 	  }
@@ -128,7 +128,7 @@ mpddata::DecodeWord(uint32_t data)
 
 	if(cfg->show_event_header(modID_current))
 	  {
-	    printf("%08X - EVENT HEADER - event_count = %d\n",
+	    DEC_SHOW("%08X - EVENT HEADER - event_count = %d\n",
 		   d.raw,
 		   d.bf.event_count);
 	  }
@@ -156,7 +156,7 @@ mpddata::DecodeWord(uint32_t data)
 
 	if(cfg->show_trigger_time(modID_current))
 	  {
-	    printf("%08X - TRIGGER TIME %d - coarse_trigger_time = %08x\n",
+	    DEC_SHOW("%08X - TRIGGER TIME %d - coarse_trigger_time = %08x\n",
 		   d.raw,
 		   (d.bf.cont) ? 2 : 1,
 		   d.bf.coarse_trigger_time );
@@ -186,9 +186,9 @@ mpddata::DecodeWord(uint32_t data)
 
 	    if(cfg->show_apv_header(modID_current, dh.bf.apv_id))
 	      {
-		printf("%08X - APV ",
+		DEC_SHOW("%08X - APV ",
 		       d.raw);
-		printf("HEADER: what %x  apv_header %x  apv_id %x\n",
+		DEC_SHOW("HEADER: what %x  apv_header %x  apv_id %x\n",
 		       dh.bf.what,
 		       dh.bf.apv_header,
 		       dh.bf.apv_id);
@@ -210,9 +210,9 @@ mpddata::DecodeWord(uint32_t data)
 
 	    if(cfg->show_apv_data(modID_current, apvID_current))
 	      {
-		printf("%08X - APV ",
+		DEC_SHOW("%08X - APV ",
 		       d.raw);
-		printf("DATA (%3d): channel_number = %3d  data = 0x%03x (%4d)\n",
+		DEC_SHOW("DATA (%3d): channel_number = %3d  data = 0x%03x (%4d)\n",
 		       data_count,
 		       rd.bf.channel_number,
 		       rd.bf.data, rd.bf.data);
@@ -225,9 +225,9 @@ mpddata::DecodeWord(uint32_t data)
 
 	    if(cfg->show_apv_trailer(modID_current, apvID_current))
 	      {
-		printf("%08X - APV ",
+		DEC_SHOW("%08X - APV ",
 		       d.raw);
-		printf("TRAILER 1: mod_id = %d  sample_count = %d  frame_counter = %d\n",
+		DEC_SHOW("TRAILER 1: mod_id = %d  sample_count = %d  frame_counter = %d\n",
 		       at.bf.mod_id,
 		       at.bf.sample_count,
 		       at.bf.frame_counter);
@@ -283,9 +283,9 @@ mpddata::DecodeWord(uint32_t data)
 	    dt.raw = data;
 	    if(cfg->show_apv_trailer(modID_current, apvID_current))
 	      {
-		printf("%08X - APV ",
+		DEC_SHOW("%08X - APV ",
 		       d.raw);
-		printf("TRAILER 2: baseline_value = %d  word_count = %d\n",
+		DEC_SHOW("TRAILER 2: baseline_value = %d  word_count = %d\n",
 		       dt.bf.baseline_value,
 		       dt.bf.word_count);
 	      }
@@ -338,7 +338,7 @@ mpddata::DecodeWord(uint32_t data)
 
 	if(cfg->show_event_trailer(modID_current))
 	  {
-	    printf("%08X - EVENT TRAILER - n_words_in_event = %d  fine_trigger_time = %d\n",
+	    DEC_SHOW("%08X - EVENT TRAILER - n_words_in_event = %d  fine_trigger_time = %d\n",
 		   d.raw,
 		   d.bf.n_words_in_event,
 		   d.bf.fine_trigger_time);
@@ -366,7 +366,7 @@ mpddata::DecodeWord(uint32_t data)
 
 	if(cfg->show_filler_word(modID_current))
 	  {
-	    printf("%08X - FILLER WORD\n",
+	    DEC_SHOW("%08X - FILLER WORD\n",
 		   d.raw);
 	  }
 	break;
@@ -374,7 +374,7 @@ mpddata::DecodeWord(uint32_t data)
 
     default:
       {
-	printf("%08X - UNDEFINED TYPE = %d\n",
+	DEC_SHOW("%08X - UNDEFINED TYPE = %d\n",
 	       gword.raw,
 	       gword.bf.data_type_tag);
 	rval = -1;

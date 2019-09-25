@@ -8,7 +8,17 @@
 #include "decconfig.hh"
 
 #define DEC_ERR(format, ...) {						\
-    fprintf(stdout,"# ERROR: "); fprintf(stdout,format, ## __VA_ARGS__);}
+  char buf[128];							\
+  sprintf(buf,format, ## __VA_ARGS__);					\
+  cerr << "# ERROR: " << buf;						\
+  }
+
+#define DEC_SHOW(format, ...) {						\
+  char buf[128];							\
+  sprintf(buf,format, ## __VA_ARGS__);					\
+  cout << buf;								\
+  }
+
 
 
 class mpddata

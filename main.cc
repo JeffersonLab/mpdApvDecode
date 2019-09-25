@@ -116,8 +116,11 @@ main(int argc, char **argv)
 
     int32_t version = 0;
     int stat = chan->ioctl("V", &version);
+
     if (stat == 0)
-      cout << "# EVIO Version  " << version << endl;
+      DEC_SHOW("# EVIO Version %d\n", version);
+
+
 
     uint32_t *buffer, blen;
     evioDictEntry tn;
@@ -160,8 +163,9 @@ main(int argc, char **argv)
 		b_iter++)
 	      {
 #ifdef DEBUG_BANKS
-		cout << "#  In bi: tag = 0x" << hex << b_iter->first.getTag()
-		     << " type = 0x" << hex << b_iter->second.contentType << endl;
+		DEC_SHOW("#  In bi: tag = 0x%x   type = 0x%x\n",
+			 b_iter->first.getTag(),
+			 b_iter->second.contentType);
 #endif
 		switch (b_iter->first.getTag())
 		  {
@@ -187,8 +191,9 @@ main(int argc, char **argv)
 		b_iter++)
 	      {
 #ifdef DEBUG_BANKS
-		cout << "#  In bi: tag = 0x" << hex << b_iter->first.getTag()
-		     << " type = 0x" << hex << b_iter->second.contentType << endl;
+		DEC_SHOW("#  In bi: tag = 0x%x  type = 0x%x\n",
+			 b_iter->first.getTag(),
+			 b_iter->second.contentType);
 #endif
 		switch (b_iter->first.getTag())
 		  {
@@ -223,7 +228,7 @@ main(int argc, char **argv)
 			  {
 			    evType = d16[0];
 #ifdef DEBUG_BANKS
-			    cout << "#  evType = " << dec << evType << endl;
+			    DEC_SHOW("#  evType = %d\n");
 #endif // DEBUG_BANKS
 
 			  }
@@ -250,9 +255,9 @@ main(int argc, char **argv)
 		    eventNumber = d64[0];
 		    eventTimestamp = d64[1];
 #ifdef DEBUG_BANKS
-		    cout << "#  eventNumber = " << dec << eventNumber
-			 << "  eventTimestamp = " << hex << eventTimestamp
-			 << endl;
+		    DEC_SHOW("#  eventNumber = %d  eventTimestamp = 0x%x\n",
+			     eventNumber,
+			     eventTimestamp);
 #endif // DEBUG_BANKS
 		  }
 
@@ -262,10 +267,8 @@ main(int argc, char **argv)
 	// Check to see if this event is skipped
 	if (eventNumber > skip_eventnumber)
 	  {
-	    cout << "# eventNumber = " << dec << eventNumber
-		 << "   evType = " << dec << evType
-		 << "   eventTimestamp = 0x" << hex << eventTimestamp
-		 << endl;
+	    DEC_SHOW("# eventNumber = %lu   evType = %d   eventTimestamp = 0x%lx\n",
+		     eventNumber, evType, eventTimestamp);
 
 	    // Get the ROC / Payload data
 	    map <int, bankIndex>::iterator rocIter;
@@ -279,12 +282,8 @@ main(int argc, char **argv)
 		uint16_t mpdnum = cfg->mpd_bank_num();
 
 #ifdef DEBUG_BANKS
-		cout << "# roc = "
-		     << dec << rocnum
-		     << "  mpdmask = 0x"
-		     << hex << cfg->mpdmask()
-		     << "  apvmask = 0x"
-		     << hex << cfg->apvmask() << endl;
+		DEC_SHOW("# roc = %d  mpdmask = 0x%x  apvmask = 0x%x\n",
+			 rocnum, cfg->mpdmask(), cfg->apvmask());
 #endif // DEBUG_BANKS
 
 		evioBankIndex ebi_roc((uint32_t *)rocIter->second.bankPointer,0);
@@ -294,15 +293,14 @@ main(int argc, char **argv)
 
 		if (d32 != NULL)
 		  {
-		    cout << "#  ROC #" << rocnum << "  MPD+APV Data"
-			 << endl;
+		    DEC_SHOW("#  ROC %d  MPD+APV Data\n",rocnum);
 		    mdat[rocnum]->DecodeBuffer(d32, len);
 		  }
 		else
 		  {
-		    printf("#      NO ROC %2d data found for mpdtag = %d  mpdnum = %d \n",
-			   rocnum,
-			   mpdtag, mpdnum);
+		    DEC_SHOW("#      NO ROC %2d data found for mpdtag = %d  mpdnum = %d \n",
+			     rocnum,
+			     mpdtag, mpdnum);
 		  }
 	      }
 	  }
