@@ -5,24 +5,72 @@
 #ifndef __MPDDEC__
 #define __MPDDEC__
 #include <stdint.h>
+#include <ostream>
 #include "decconfig.hh"
 
 #define DEC_ERR(format, ...) {						\
-  char buf[128];							\
-  sprintf(buf,format, ## __VA_ARGS__);					\
-  cerr << "# ERROR: " << buf;						\
+    char buf[128];							\
+    sprintf((char *)buf,format, ## __VA_ARGS__);			\
+    *fp << "# ERROR: " << buf;						\
   }
 
 #define DEC_SHOW(format, ...) {						\
-  char buf[128];							\
-  sprintf(buf,format, ## __VA_ARGS__);					\
-  cout << buf;								\
+    char buf[128];							\
+    sprintf((char *)buf,format, ## __VA_ARGS__);			\
+    *fp << buf;								\
   }
 
 
 
 class mpddata
 {
+public:
+  typedef struct
+  {
+    uint32_t ndata; // number of data words in current frame
+    uint8_t sample_count; // current frame  APV Trailer
+    uint8_t frame_count; // current frame  APV Trailer
+    uint16_t baseline_value; // current frame APV Trailer
+    uint8_t word_count; // current frame  APV Trailer
+  } apvstats;
+
+  typedef struct
+  {
+    uint32_t n_words_in_block; // block trailer
+    uint16_t apvmask;
+    uint8_t  napv;
+    uint32_t event_count;  // event header
+    uint64_t trigger_time; // trigger time
+    apvstats apv[16]; // apv_id is index
+    uint16_t n_words_in_event;
+    int have_stats;
+  } mpdstats;
+
+  mpdstats mpd[21];
+  uint32_t mpdmask;
+  uint16_t nmpd;
+
+  decconfig *cfg;
+  ostream *fp;
+
+  mpddata(decconfig &acfg)
+  {
+    cfg = &acfg;
+    fp = &cout;
+  };
+
+  int SetOutput(ostream &os)
+  {
+    fp = &os;
+    return 0;
+  };
+  int ShowData(int enable);
+  int ClearStats();
+  int DecodeWord(uint32_t data);
+  int DecodeBuffer(const uint32_t *buffer, int len);
+
+  ////////////////////////////////////////////////////////
+  // Decoding structures and unions for the MPD data
   typedef struct
   {
     uint32_t data:21;
@@ -212,43 +260,6 @@ class mpddata
     mpd_filler bf;
   } mpd_filler_t;
 
-public:
-  typedef struct
-  {
-    uint32_t ndata; // number of data words in current frame
-    uint8_t sample_count; // current frame  APV Trailer
-    uint8_t frame_count; // current frame  APV Trailer
-    uint16_t baseline_value; // current frame APV Trailer
-    uint8_t word_count; // current frame  APV Trailer
-  } apvstats;
-
-  typedef struct
-  {
-    uint32_t n_words_in_block; // block trailer
-    uint16_t apvmask;
-    uint8_t  napv;
-    uint32_t event_count;  // event header
-    uint64_t trigger_time; // trigger time
-    apvstats apv[16]; // apv_id is index
-    uint16_t n_words_in_event;
-    int have_stats;
-  } mpdstats;
-
-  mpdstats mpd[21];
-  uint32_t mpdmask;
-  uint16_t nmpd;
-
-  decconfig *cfg;
-
-  mpddata(decconfig &acfg)
-  {
-    cfg = &acfg;
-  };
-
-  int ShowData(int enable);
-  int ClearStats();
-  int DecodeWord(uint32_t data);
-  int DecodeBuffer(const uint32_t *buffer, int len);
 };
 
 #endif /* __MPDDEC__ */

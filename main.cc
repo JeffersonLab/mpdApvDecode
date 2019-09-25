@@ -12,6 +12,7 @@
 
 
 #include <iostream>
+#include <fstream>
 #include <stdio.h>
 #include "evioUtil.hxx"
 #include "evioFileChannel.hxx"
@@ -21,6 +22,8 @@
 
 using namespace evio;
 using namespace std;
+
+std::ostream* fp = &cout;
 
 class InputParser
 {
@@ -69,6 +72,7 @@ main(int argc, char **argv)
   string evio_filename,
     config_filename = "decode.cfg", out_filename = "out.dec";
   bool showNoData = false;
+  ofstream fout;
 
   if (input.cmdOptionExists("-f"))
     {
@@ -83,6 +87,8 @@ main(int argc, char **argv)
   if (input.cmdOptionExists("-o"))
     {
       out_filename = input.getCmdOption("-o").c_str();
+      fout.open(out_filename.c_str());
+      fp = &fout;
     }
 
   if (input.cmdOptionExists("-s"))
@@ -133,6 +139,7 @@ main(int argc, char **argv)
       {
 	mdat[iroc] = new mpddata(*cfg);
     	mdat[iroc]->ClearStats();
+	mdat[iroc]->SetOutput(*fp);
       }
 
 
@@ -327,6 +334,9 @@ main(int argc, char **argv)
       cerr << e.toString() << endl;
       exit(EXIT_FAILURE);
     }
+
+  if(fout.is_open())
+    fout.close();
 
   exit(0);
   printf("%s", DataTypeNames[0]);
