@@ -159,7 +159,6 @@ main(int argc, char **argv)
 	    for(b_iter = ebi.tagNumMap.begin(); b_iter != ebi.tagNumMap.end();
 		b_iter++)
 	      {
-#define DEBUG_BANKS
 #ifdef DEBUG_BANKS
 		cout << "#  In bi: tag = 0x" << hex << b_iter->first.getTag()
 		     << " type = 0x" << hex << b_iter->second.contentType << endl;
@@ -263,8 +262,10 @@ main(int argc, char **argv)
 	// Check to see if this event is skipped
 	if (eventNumber > skip_eventnumber)
 	  {
-	    printf("# %6d: evType = %d   eventTimestamp = 0x%lx \n",
-		   (uint32_t) eventNumber, evType, eventTimestamp);
+	    cout << "# eventNumber = " << dec << eventNumber
+		 << "   evType = " << dec << evType
+		 << "   eventTimestamp = 0x" << hex << eventTimestamp
+		 << endl;
 
 	    // Get the ROC / Payload data
 	    map <int, bankIndex>::iterator rocIter;
@@ -293,8 +294,8 @@ main(int argc, char **argv)
 
 		if (d32 != NULL)
 		  {
-		    printf("#      ROC %2d MPD+APV Data\n",
-			   rocnum);
+		    cout << "#  ROC #" << rocnum << "  MPD+APV Data"
+			 << endl;
 		    mdat[rocnum]->DecodeBuffer(d32, len);
 		  }
 		else
